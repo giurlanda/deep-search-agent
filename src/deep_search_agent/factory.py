@@ -162,7 +162,9 @@ def create_deep_search_agent(
     reserved_names = {agent["name"] for agent in built_in_subagents}
     extra_subagents = list(subagents or [])
     for agent in extra_subagents:
-        name = agent["name"] if isinstance(agent, dict) else getattr(agent, "name", None)
+        name = (
+            agent["name"] if isinstance(agent, dict) else getattr(agent, "name", None)
+        )
         if name in reserved_names:
             msg = f"subagent name {name!r} is reserved by deep_search_agent"
             raise ValueError(msg)

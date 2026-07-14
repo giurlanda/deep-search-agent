@@ -53,6 +53,7 @@ markers = [
 dev = [
     "pytest>=9.1.1",
     "pytest-playwright>=0.8.0",
+    "ruff>=0.15.21",
 ]
 
 [project.optional-dependencies]

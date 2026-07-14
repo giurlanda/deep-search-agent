@@ -51,7 +51,9 @@ class DebugMiddleware(AgentMiddleware):
 
     def after_model(self, state: dict[str, Any], runtime: Runtime) -> None:
         last = state["messages"][-1]
-        print(self._colorize(f"\n[debug][model] {type(last).__name__}: {last.content!r}"))
+        print(
+            self._colorize(f"\n[debug][model] {type(last).__name__}: {last.content!r}")
+        )
         for call in getattr(last, "tool_calls", None) or []:
             print(
                 self._colorize(
@@ -66,5 +68,7 @@ class DebugMiddleware(AgentMiddleware):
     ) -> ToolMessage | Command[Any]:
         result = handler(request)
         content = result.content if isinstance(result, ToolMessage) else result
-        print(self._colorize(f"[debug][tool] {request.tool_call['name']} -> {content!r}"))
+        print(
+            self._colorize(f"[debug][tool] {request.tool_call['name']} -> {content!r}")
+        )
         return result

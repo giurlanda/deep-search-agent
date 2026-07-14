@@ -48,6 +48,13 @@ parameter or a `rubric` key in the invoke state. Set `auto_rubric=False` to
 disable auto-injection (the loop then only activates when the caller supplies a
 `rubric` in the invoke state).
 
+Refinement cycles are **gap-driven**: when the grader re-runs the orchestrator,
+its prompt instructs it not to restart the decomposition. Instead it maps each
+failed rubric criterion to a concrete gap, records the gaps in
+`research/gaps.md` on the shared filesystem, adds targeted todos for those gaps
+only, and re-synthesizes — reusing the findings already collected in previous
+cycles.
+
 ## Design contracts
 
 Two invariants worth knowing when you extend the library:
