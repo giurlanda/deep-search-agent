@@ -33,3 +33,5 @@ __all__ = [
     "create_fetch_url_tool",
     "create_searxng_search_tool",
 ]
+
+__version__ = "0.1.0"

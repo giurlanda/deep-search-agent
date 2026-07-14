@@ -27,6 +27,7 @@ coverage.xml
 
 # Docs (mkdocs build output)
 site/
+public/
 
 # Env
 .env

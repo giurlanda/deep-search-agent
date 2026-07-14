@@ -1,12 +1,28 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "deep-search-agent"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Deep web search agent library built on LangChain deepagents: orchestrator + specialized subagents + iterative rubric-graded refinement."
 readme = "README.md"
+license = { text = "MIT" }
 authors = [
     { name = "Hawk", email = "francesco.giurlanda@gmail.com" }
 ]
 requires-python = ">=3.12"
+keywords = ["langchain", "deepagents", "agent", "deep-search", "search", "llm", "research"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
 dependencies = [
     "deepagents>=0.6.5",
     "httpx>=0.28.1",
@@ -16,9 +32,11 @@ dependencies = [
     "trafilatura>=2.1.0",
 ]
 
-[build-system]
-requires = ["uv_build>=0.9.0,<0.10.0"]
-build-backend = "uv_build"
+[project.urls]
+Homepage = "https://github.com/giurlanda/deep-search-agent"
+Documentation = "https://giurlanda.github.io/deep-search-agent/"
+Repository = "https://github.com/giurlanda/deep-search-agent"
+Issues = "https://github.com/giurlanda/deep-search-agent/issues"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -36,3 +54,16 @@ dev = [
     "pytest>=9.1.1",
     "pytest-playwright>=0.8.0",
 ]
+
+[project.optional-dependencies]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.26",
+]
+
+[tool.hatch.version]
+path = "src/deep_search_agent/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/deep_search_agent"]
