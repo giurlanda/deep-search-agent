@@ -1,0 +1,38 @@
+[project]
+name = "deep-search-agent"
+version = "0.1.0"
+description = "Deep web search agent library built on LangChain deepagents: orchestrator + specialized subagents + iterative rubric-graded refinement."
+readme = "README.md"
+authors = [
+    { name = "Hawk", email = "francesco.giurlanda@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "deepagents>=0.6.5",
+    "httpx>=0.28.1",
+    "langchain>=1.0,<2.0",
+    "langchain-core>=1.0,<2.0",
+    "pypdf>=6.14.2",
+    "trafilatura>=2.1.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.0,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+# e2e tests are opt-in (run with: pytest -m e2e). Playwright's sync API keeps an
+# asyncio loop running on the main thread for the whole session, which breaks
+# unit tests that call asyncio.run() in the same process.
+addopts = "-m 'not e2e'"
+markers = [
+    "e2e: browser-based end-to-end tests (require Playwright browsers; run with -m e2e)",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-playwright>=0.8.0",
+]

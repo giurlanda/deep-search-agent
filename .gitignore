@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+build/
+dist/
+wheels/
+*.egg-info/
+*.egg
+.eggs/
+
+# Virtualenv / tooling
+.venv/
+venv/
+.test-venv/
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.pytype/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Docs (mkdocs build output)
+site/
+
+# Env
+.env
+.env.*
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+
+# Materialized query results / workspace
+workspace/
+
+
+# Manual test scripts against real databases
+snippets/
+
+# codebase
+graphify-out
+
+# Playwright
+test-results/
+playwright-report/
