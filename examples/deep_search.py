@@ -17,6 +17,7 @@ agent = create_deep_search_agent(
     model=model_openrouter,
     searxng_base_url="http://localhost:8888",
     middleware=[DebugMiddleware()],
+    subagents_middleware=[DebugMiddleware()],
     max_research_cycles=3,
 )
 
