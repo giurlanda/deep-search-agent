@@ -287,6 +287,88 @@ def test_missing_model_raises():
         create_deep_search_agent(model=None)
 
 
+# --- metrics wiring ----------------------------------------------------------
+
+
+def test_metrics_injects_orchestrator_and_subagent_middleware(captured):
+    from deep_search_agent import SessionMetrics
+    from deep_search_agent.metrics import (
+        _OrchestratorMetricsMiddleware,
+        _SubagentMetricsMiddleware,
+    )
+
+    metrics = SessionMetrics()
+    create_deep_search_agent(model=make_fake_model(), metrics=metrics)
+
+    # Orchestrator metrics middleware is present and runs first.
+    assert isinstance(captured["middleware"][0], _OrchestratorMetricsMiddleware)
+    # Every built-in sub-agent gets its own metrics middleware, named after it.
+    for agent in captured["subagents"]:
+        metric_mw = [
+            mw
+            for mw in agent["middleware"]
+            if isinstance(mw, _SubagentMetricsMiddleware)
+        ]
+        assert len(metric_mw) == 1
+        assert metric_mw[0]._subagent_name == agent["name"]
+
+
+def test_metrics_middleware_shares_the_same_collector(captured):
+    from deep_search_agent import SessionMetrics
+    from deep_search_agent.metrics import (
+        _OrchestratorMetricsMiddleware,
+        _SubagentMetricsMiddleware,
+    )
+
+    metrics = SessionMetrics()
+    create_deep_search_agent(model=make_fake_model(), metrics=metrics)
+
+    orchestrator_mw = next(
+        mw
+        for mw in captured["middleware"]
+        if isinstance(mw, _OrchestratorMetricsMiddleware)
+    )
+    assert orchestrator_mw._metrics is metrics
+    for agent in captured["subagents"]:
+        for mw in agent["middleware"]:
+            if isinstance(mw, _SubagentMetricsMiddleware):
+                assert mw._metrics is metrics
+
+
+def test_metrics_middleware_appended_after_user_subagents_middleware(captured):
+    from deep_search_agent import SessionMetrics
+    from deep_search_agent.metrics import _SubagentMetricsMiddleware
+
+    sentinel = DefaultRubricMiddleware("- x")
+    create_deep_search_agent(
+        model=make_fake_model(),
+        metrics=SessionMetrics(),
+        subagents_middleware=[sentinel],
+    )
+
+    for agent in captured["subagents"]:
+        mws = agent["middleware"]
+        assert mws[0] is sentinel
+        assert isinstance(mws[-1], _SubagentMetricsMiddleware)
+
+
+def test_no_metrics_middleware_by_default(captured):
+    from deep_search_agent.metrics import (
+        _OrchestratorMetricsMiddleware,
+        _SubagentMetricsMiddleware,
+    )
+
+    create_deep_search_agent(model=make_fake_model())
+
+    assert not any(
+        isinstance(mw, _OrchestratorMetricsMiddleware) for mw in captured["middleware"]
+    )
+    for agent in captured["subagents"]:
+        assert "middleware" not in agent or not any(
+            isinstance(mw, _SubagentMetricsMiddleware) for mw in agent["middleware"]
+        )
+
+
 def test_end_to_end_graph_compiles():
     """Smoke test against the real create_deep_agent (no LLM calls)."""
     agent = create_deep_search_agent(model=make_fake_model())

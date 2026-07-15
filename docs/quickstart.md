@@ -42,6 +42,7 @@ Deep-search-specific parameters:
 | `auto_rubric` | `True` | Auto-inject the rubric into the state on every invoke |
 | `subagents` | `None` | Extra sub-agents, added to the built-in ones |
 | `backend` | `StateBackend()` | Filesystem backend shared by the orchestrator and every sub-agent |
+| `metrics` | `None` | A `SessionMetrics` collector; when passed, per-cycle and global observability metrics are recorded into it. See [Extending → Collecting session metrics](guide/extending.md#collecting-session-metrics) |
 
 All other keyword arguments (`tools`, `checkpointer`, `store`, `skills`,
 `interrupt_on`, ...) are passed through unchanged to `create_deep_agent`. See

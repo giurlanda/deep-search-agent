@@ -24,12 +24,19 @@ from typing import TYPE_CHECKING, Any
 from deepagents import RubricMiddleware, create_deep_agent
 from deepagents.backends import StateBackend
 
+from deep_search_agent.metrics import (
+    _OrchestratorMetricsMiddleware,
+    _SubagentMetricsMiddleware,
+)
 from deep_search_agent.middleware import (
     DefaultRubricMiddleware,
     SearchBudgetResetMiddleware,
 )
 from deep_search_agent.prompts import DEEP_SEARCH_RUBRIC, ORCHESTRATOR_PROMPT_TEMPLATE
 from deep_search_agent.subagents import (
+    FACT_CHECK_AGENT_NAME,
+    FETCH_AGENT_NAME,
+    SEARCH_AGENT_NAME,
     build_fact_check_subagent,
     build_fetch_subagent,
     build_search_subagent,
@@ -46,6 +53,8 @@ if TYPE_CHECKING:
     from langchain_core.messages import SystemMessage
     from langchain_core.tools import BaseTool
     from langgraph.graph.state import CompiledStateGraph
+
+    from deep_search_agent.metrics import SessionMetrics
 
 
 def _validate_positive(name: str, value: int) -> None:
@@ -82,6 +91,7 @@ def create_deep_search_agent(
     subagents_middleware: Sequence[AgentMiddleware] = (),
     subagents: Sequence[Any] | None = None,
     backend: BackendProtocol | BackendFactory | None = None,
+    metrics: SessionMetrics | None = None,
     **create_deep_agent_kwargs: Any,
 ) -> CompiledStateGraph:
     """Create a deep-search agent (orchestrator + specialized sub-agents).
@@ -154,6 +164,14 @@ def create_deep_search_agent(
             filesystem. When omitted, a single :class:`~deepagents.backends.StateBackend`
             instance is created and shared; when provided, that exact instance
             is propagated to ``create_deep_agent``.
+        metrics: Optional :class:`~deep_search_agent.metrics.SessionMetrics`
+            collector. When provided, observation-only middleware are injected
+            into the orchestrator and each built-in sub-agent to record, over the
+            whole session, per-cycle and global tool-call counts, sub-agent
+            invocation counts and execution times (avg/min/max), and the overall
+            execution time. The caller owns the instance and reads the results
+            from it after the run (metrics accumulate until
+            :meth:`SessionMetrics.reset`). ``None`` (default) disables metrics.
         **create_deep_agent_kwargs: Any remaining ``create_deep_agent``
             parameter (``tools``, ``checkpointer``, ``store``, ``skills``,
             ``interrupt_on``, ...), passed through unchanged.
@@ -207,15 +225,28 @@ def create_deep_search_agent(
     )
 
     # --- Sub-agents --------------------------------------------------------
+    # When metrics are collected, each built-in sub-agent also carries its own
+    # metrics middleware (added after the caller's ``subagents_middleware``) so
+    # invocations, timings, and tool calls are attributed to the right agent.
+    def _subagent_middleware(name: str) -> Sequence[AgentMiddleware]:
+        base = list(subagents_middleware)
+        if metrics is not None:
+            base.append(_SubagentMetricsMiddleware(metrics, name))
+        return base
+
     built_in_subagents = [
         build_search_subagent(
             all_search_tools,
             max_search_results_per_query=max_search_results_per_query,
-            middleware=subagents_middleware,
+            middleware=_subagent_middleware(SEARCH_AGENT_NAME),
         ),
-        build_fetch_subagent(fetch_tool, middleware=subagents_middleware),
+        build_fetch_subagent(
+            fetch_tool, middleware=_subagent_middleware(FETCH_AGENT_NAME)
+        ),
         build_fact_check_subagent(
-            all_search_tools, fetch_tool, middleware=subagents_middleware
+            all_search_tools,
+            fetch_tool,
+            middleware=_subagent_middleware(FACT_CHECK_AGENT_NAME),
         ),
     ]
     reserved_names = {agent["name"] for agent in built_in_subagents}
@@ -231,6 +262,11 @@ def create_deep_search_agent(
     # --- Evaluator/critic loop ----------------------------------------------
     effective_rubric = rubric if rubric is not None else DEEP_SEARCH_RUBRIC
     agent_middleware: list[AgentMiddleware] = []
+    if metrics is not None:
+        # Observation-only; placed first so its before_agent stamps the run
+        # start before any other middleware runs. It never returns a jump_to,
+        # so it does not interfere with the rubric loop's cycle boundaries.
+        agent_middleware.append(_OrchestratorMetricsMiddleware(metrics))
     if auto_rubric:
         # Must precede RubricMiddleware so the rubric is in state when the
         # grading loop initializes.
