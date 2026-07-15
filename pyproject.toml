@@ -53,6 +53,7 @@ markers = [
 dev = [
     "pytest>=9.1.1",
     "pytest-playwright>=0.8.0",
+    "ruff>=0.15.21",
 ]
 
 [project.optional-dependencies]
@@ -60,6 +61,12 @@ docs = [
     "mkdocs>=1.6",
     "mkdocs-material>=9.5",
     "mkdocstrings[python]>=0.26",
+]
+# Extra for the opt-in performance benchmark (benchmark/). Provides the
+# OpenAI-compatible client used to reach OpenRouter for both the inference
+# model and the LLM-as-a-judge.
+benchmark = [
+    "langchain-openai>=1.0,<2.0",
 ]
 
 [tool.hatch.version]

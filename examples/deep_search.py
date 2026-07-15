@@ -9,7 +9,7 @@ model_openrouter = ChatOpenAI(
     temperature=0.1,
     timeout=120,
     max_retries=1,
-    stream_usage=True
+    stream_usage=True,
 )
 
 

@@ -120,9 +120,19 @@ def test_budgets_are_embedded_in_prompts(captured):
 
     assert "4" in captured["system_prompt"]
     assert "at most\n   2 URLs" not in captured["system_prompt"]  # sanity: formatted
-    assert "2 URLs per research cycle" in captured["system_prompt"].replace("\n   ", " ")
+    assert "2 URLs per research cycle" in captured["system_prompt"].replace(
+        "\n   ", " "
+    )
     search_agent = captured["subagents"][0]
     assert "7 results" in search_agent["system_prompt"].replace("\n  ", " ")
+
+
+def test_refinement_instructions_in_orchestrator_prompt(captured):
+    create_deep_search_agent(model=make_fake_model())
+
+    prompt = captured["system_prompt"]
+    assert "## Refinement cycles" in prompt
+    assert "research/gaps.md" in prompt
 
 
 def test_custom_system_prompt_wins(captured):

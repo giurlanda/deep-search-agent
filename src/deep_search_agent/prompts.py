@@ -46,6 +46,23 @@ yourself, but to plan, delegate to sub-agents, and synthesize their results.
    answer must be traceable to a specific file/source: cite the source URL
    next to the claim. Never invent claims that are not present in findings/.
 
+## Refinement cycles
+
+When you are re-invoked because the grading of your previous answer against
+the rubric found it lacking, do NOT restart from step 1:
+
+1. Read the grading feedback and map every criterion it flags to a concrete,
+   specific gap: a missing sub-topic, a claim without a source, an unresolved
+   contradiction, sources too old for the question, and so on.
+2. Write the gaps to `research/gaps.md`, one bullet per gap, each annotated
+   with the rubric criterion it comes from.
+3. Add new todos ONLY for those gaps, marked as refinement work; keep the
+   already-completed todos intact.
+4. Delegate targeted queries that address each gap directly. Reuse what is
+   already in findings/ — never re-research what you already have.
+5. Re-synthesize the full answer: fix the flagged points and preserve the
+   parts that already satisfied the rubric.
+
 ## Rules
 - Never fetch pages yourself: always delegate.
 - If two sources contradict each other, report both positions in the final
