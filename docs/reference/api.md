@@ -17,6 +17,14 @@ exported from the top-level package and listed in `__all__`.
 
 ::: deep_search_agent.DefaultRubricMiddleware
 
+## Observability
+
+::: deep_search_agent.SessionMetrics
+
+::: deep_search_agent.SubagentStats
+
+::: deep_search_agent.CycleMetrics
+
 ## Prompts & rubric
 
 ::: deep_search_agent.DEEP_SEARCH_RUBRIC

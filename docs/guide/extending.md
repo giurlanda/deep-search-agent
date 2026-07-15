@@ -79,6 +79,47 @@ agent = create_deep_search_agent(
 )
 ```
 
+## Collecting session metrics
+
+Pass a `SessionMetrics` instance to observe how much work the orchestrator and
+its sub-agents did. The collector is thread-safe and accumulates over every
+research cycle (and across successive invocations of the same agent) until you
+call `reset()`:
+
+```python
+from deep_search_agent import create_deep_search_agent, SessionMetrics
+
+metrics = SessionMetrics()
+agent = create_deep_search_agent(
+    model="anthropic:claude-sonnet-4-6",
+    metrics=metrics,
+)
+
+agent.invoke({"messages": [{"role": "user", "content": "..."}]})
+
+# Typed access:
+print(metrics.total_duration)          # overall execution time (s)
+print(metrics.global_tool_calls)       # {tool_name: count} across orchestrator + sub-agents
+print(metrics.global_subagent_invocations)
+for name, stats in metrics.subagent_stats.items():
+    print(name, stats.count, stats.avg_time, stats.min_time, stats.max_time)
+for cycle in metrics.cycles:           # per research cycle
+    print(cycle.orchestrator_tool_calls, cycle.subagent_invocations)
+
+# Or a JSON-serializable snapshot:
+import json
+print(json.dumps(metrics.to_dict(), indent=2))
+```
+
+What is recorded, per research cycle and globally:
+
+- how many times the orchestrator called each of its own tools (the `task`
+  delegation tool is tracked as a sub-agent invocation instead);
+- how many times each sub-agent was invoked;
+- how many times each sub-agent called each of its tools;
+- per-sub-agent execution time (average, min, max) and the overall execution
+  time.
+
 ## Reusing the tools standalone
 
 The tool factories are part of the public API and can be used outside the agent:

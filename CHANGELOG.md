@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-16
+
+### Added
+
+- `SessionMetrics`, a thread-safe collector of observability metrics, and an
+  optional `metrics` parameter on `create_deep_search_agent` to wire it in
+  ([#15]). When a `SessionMetrics` instance is passed, observation-only
+  middleware injected into the orchestrator and each built-in sub-agent record,
+  over the whole session:
+  - per research cycle: the orchestrator's tool-call counts, each sub-agent's
+    invocation count, and each sub-agent's tool-call counts;
+  - globally: total tool-call counts (orchestrator + sub-agents), total
+    sub-agent invocations, per-sub-agent execution time (average/min/max), and
+    the overall execution time.
+  - Metrics accumulate for the lifetime of the object (across research cycles
+    and successive invocations of a reused agent) until `reset()` is called;
+    read them through typed properties (`cycles`, `global_tool_calls`,
+    `subagent_stats`, ...) or as a JSON-serializable mapping via `to_dict()`.
+  - New public symbols `SessionMetrics`, `SubagentStats`, and `CycleMetrics`.
+    The sub-agent delegation tool (`task`) is tracked as a sub-agent invocation
+    rather than as an orchestrator tool. The `metrics` parameter defaults to
+    `None` (disabled), so behavior is backward compatible.
+
 ## [0.1.4] - 2026-07-15
 
 ### Added
@@ -107,7 +130,9 @@ Initial release.
 [#9]: https://github.com/giurlanda/deep-search-agent/issues/9
 [#11]: https://github.com/giurlanda/deep-search-agent/issues/11
 [#13]: https://github.com/giurlanda/deep-search-agent/issues/13
-[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.4...HEAD
+[#15]: https://github.com/giurlanda/deep-search-agent/issues/15
+[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.1...v0.1.2
