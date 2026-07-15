@@ -69,6 +69,8 @@ Deep-search-specific parameters:
 | `max_urls_to_scrape_per_cycle` | `3` | Maximum URLs to fetch per research cycle |
 | `searxng_base_url` | `http://localhost:8888` | URL of the SearxNG instance |
 | `searxng_engines` | `None` | List of SearxNG engines to restrict the search to |
+| `searxng_rate_limit` | `None` | Minimum seconds between SearxNG requests (thread-safe, shared across concurrent searches); `None` disables rate limiting |
+| `searxng_budget` | `None` | Maximum SearxNG searches per research cycle; when exhausted the tool returns an `ERROR:` telling the model no budget is left. `None` means unlimited |
 | `request_timeout` | `15.0` | HTTP timeout (s) for search and fetch |
 | `max_content_chars_per_page` | `20000` | Truncation of extracted content per page |
 | `search_tools` | `None` | Additional search tools for search-agent and fact-check-agent (e.g. Tavily, RAG retrieval) |
