@@ -7,10 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.1] - 2026-07-14
+## [0.1.1] - 2026-07-15
 
 ### Added
 
+- Opt-in, real end-to-end `benchmark/` suite: runs the agent on five
+  deliberately complex research questions via a live LLM (OpenRouter) and a
+  live SearxNG instance, then grades each answer with an independent
+  LLM-as-a-judge on four 0-5 metrics. Lives outside `src/` and is never
+  shipped with the library; adds a `benchmark` extra (`langchain-openai`).
 - MkDocs (Material + mkdocstrings) documentation site, published to GitHub
   Pages via the `docs` workflow: home, installation, quickstart, architecture
   and extending guides, and an auto-generated API reference.
