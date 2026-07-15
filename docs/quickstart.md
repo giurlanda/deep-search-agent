@@ -39,10 +39,11 @@ Deep-search-specific parameters:
 | `rubric` | `DEEP_SEARCH_RUBRIC` | Custom evaluation rubric |
 | `auto_rubric` | `True` | Auto-inject the rubric into the state on every invoke |
 | `subagents` | `None` | Extra sub-agents, added to the built-in ones |
+| `backend` | `StateBackend()` | Filesystem backend shared by the orchestrator and every sub-agent |
 
-All other keyword arguments (`tools`, `backend`, `checkpointer`, `store`,
-`skills`, `interrupt_on`, ...) are passed through unchanged to
-`create_deep_agent`. See the [full API reference](reference/api.md) for details.
+All other keyword arguments (`tools`, `checkpointer`, `store`, `skills`,
+`interrupt_on`, ...) are passed through unchanged to `create_deep_agent`. See
+the [full API reference](reference/api.md) for details.
 
 !!! tip "Persistence needs a checkpointer"
     The `thread_id` in `config` only carries state across turns when the agent

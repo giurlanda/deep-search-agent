@@ -22,6 +22,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from deepagents import RubricMiddleware, create_deep_agent
+from deepagents.backends import StateBackend
 
 from deep_search_agent.middleware import DefaultRubricMiddleware
 from deep_search_agent.prompts import DEEP_SEARCH_RUBRIC, ORCHESTRATOR_PROMPT_TEMPLATE
@@ -36,6 +37,7 @@ from deep_search_agent.tools.search import DEFAULT_SEARXNG_BASE_URL
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from deepagents.backends.protocol import BackendFactory, BackendProtocol
     from langchain.agents.middleware.types import AgentMiddleware
     from langchain_core.language_models import BaseChatModel
     from langchain_core.messages import SystemMessage
@@ -66,6 +68,7 @@ def create_deep_search_agent(
     system_prompt: str | SystemMessage | None = None,
     middleware: Sequence[AgentMiddleware] = (),
     subagents: Sequence[Any] | None = None,
+    backend: BackendProtocol | BackendFactory | None = None,
     **create_deep_agent_kwargs: Any,
 ) -> CompiledStateGraph:
     """Create a deep-search agent (orchestrator + specialized sub-agents).
@@ -115,9 +118,15 @@ def create_deep_search_agent(
         subagents: Extra sub-agents (e.g. a RAG retrieval agent over an
             internal knowledge base) added alongside the built-in
             ``search-agent``, ``fetch-agent``, and ``fact-check-agent``.
+        backend: Filesystem backend shared by the orchestrator and every
+            sub-agent, so that ``findings/<source-slug>.md`` files written by
+            a sub-agent flow back to the orchestrator on the same virtual
+            filesystem. When omitted, a single :class:`~deepagents.backends.StateBackend`
+            instance is created and shared; when provided, that exact instance
+            is propagated to ``create_deep_agent``.
         **create_deep_agent_kwargs: Any remaining ``create_deep_agent``
-            parameter (``tools``, ``backend``, ``checkpointer``, ``store``,
-            ``skills``, ``interrupt_on``, ...), passed through unchanged.
+            parameter (``tools``, ``checkpointer``, ``store``, ``skills``,
+            ``interrupt_on``, ...), passed through unchanged.
 
     Returns:
         The compiled deep agent graph, ready for ``invoke`` / ``astream``.
@@ -136,6 +145,12 @@ def create_deep_search_agent(
     _validate_positive("max_research_cycles", max_research_cycles)
     _validate_positive("max_search_results_per_query", max_search_results_per_query)
     _validate_positive("max_urls_to_scrape_per_cycle", max_urls_to_scrape_per_cycle)
+
+    # Resolve the shared backend up front so the orchestrator and the
+    # sub-agents provably operate on the same virtual filesystem: default to a
+    # single StateBackend when the caller does not supply one, otherwise
+    # propagate the caller's instance unchanged.
+    effective_backend = backend if backend is not None else StateBackend()
 
     # --- Tools for the sub-agents -----------------------------------------
     searxng_tool = create_searxng_search_tool(
@@ -193,5 +208,6 @@ def create_deep_search_agent(
         system_prompt=system_prompt,
         middleware=agent_middleware,
         subagents=[*built_in_subagents, *extra_subagents],
+        backend=effective_backend,
         **create_deep_agent_kwargs,
     )

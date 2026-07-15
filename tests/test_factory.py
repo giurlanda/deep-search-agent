@@ -166,6 +166,23 @@ def test_kwargs_passed_through_to_create_deep_agent(captured):
     assert captured["debug"] is True
 
 
+def test_default_backend_is_a_shared_state_backend(captured):
+    from deepagents.backends import StateBackend
+
+    create_deep_search_agent(model=make_fake_model())
+
+    assert isinstance(captured["backend"], StateBackend)
+
+
+def test_explicit_backend_is_propagated(captured):
+    from deepagents.backends import StateBackend
+
+    my_backend = StateBackend()
+    create_deep_search_agent(model=make_fake_model(), backend=my_backend)
+
+    assert captured["backend"] is my_backend
+
+
 @pytest.mark.parametrize(
     "kwargs",
     [

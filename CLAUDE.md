@@ -44,8 +44,11 @@ valuta la risposta contro la rubric e rilancia l'orchestratore fino a `max_resea
   La factory è interamente keyword-only (`*`).
 - **Nomi sub-agente riservati**: `search-agent`, `fetch-agent`, `fact-check-agent`. Passare un sub-agente
   extra con uno di questi nomi solleva `ValueError`.
-- **Pass-through**: ogni kwarg non riconosciuto va a `create_deep_agent` invariato (`backend`,
-  `checkpointer`, `store`, `skills`, `interrupt_on`, `tools`, ...). Non intercettarli senza motivo.
+- **Pass-through**: ogni kwarg non riconosciuto va a `create_deep_agent` invariato
+  (`checkpointer`, `store`, `skills`, `interrupt_on`, `tools`, ...). Non intercettarli senza motivo.
+- **Backend condiviso**: `backend` è un parametro esplicito della factory. La factory risolve un
+  unico backend (default `StateBackend()`) e lo propaga a `create_deep_agent`, così orchestratore e
+  sub-agenti condividono lo stesso filesystem virtuale (i `findings/*.md` tornano all'orchestratore).
 - **Budget positivi**: `max_research_cycles`, `max_search_results_per_query`,
   `max_urls_to_scrape_per_cycle` sono validati come interi positivi (`_validate_positive`).
 - **API pubblica**: qualsiasi nuovo simbolo esportato va aggiunto a `__all__` in

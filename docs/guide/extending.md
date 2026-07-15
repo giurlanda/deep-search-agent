@@ -1,9 +1,8 @@
 # Extending
 
 Every keyword argument `create_deep_search_agent` does not recognize is passed
-through unchanged to `create_deep_agent` (`tools`, `backend`, `checkpointer`,
-`store`, `skills`, `interrupt_on`, ...), so the full deepagents surface stays
-available.
+through unchanged to `create_deep_agent` (`tools`, `checkpointer`, `store`,
+`skills`, `interrupt_on`, ...), so the full deepagents surface stays available.
 
 ## Adding a retrieval agent (RAG) over an internal knowledge base
 
@@ -40,8 +39,11 @@ agent = create_deep_search_agent(
 
 ## Persistent backend for findings
 
-By default the `findings/` files live in an ephemeral virtual filesystem. Point
-the agent at a real directory with a `FilesystemBackend`:
+The orchestrator and every sub-agent share a single `backend`, so the
+`findings/<source-slug>.md` files a sub-agent writes flow back to the
+orchestrator on the same filesystem. By default that backend is an ephemeral
+`StateBackend`; pass an explicit `backend` to point the agent at a real
+directory with a `FilesystemBackend`:
 
 ```python
 from deepagents.backends import FilesystemBackend
