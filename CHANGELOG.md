@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-07-15
+
+### Added
+
+- `searxng_rate_limit` and `searxng_budget` parameters on
+  `create_deep_search_agent` ([#13]) to throttle SearxNG usage when sub-agents
+  run searches concurrently through deepagents' thread pool:
+  - `searxng_rate_limit` sets the minimum number of seconds between two SearxNG
+    requests, enforced by a thread-safe min-interval limiter shared by the
+    built-in search tool. If a request would wait longer than `request_timeout`
+    for a free slot, the tool returns an `ERROR:` string instead of performing
+    it.
+  - `searxng_budget` caps the number of SearxNG searches per research cycle;
+    once exhausted the tool returns an `ERROR:` string telling the model no
+    budget is left. The counter is reset at each research-cycle boundary by the
+    new `SearchBudgetResetMiddleware`.
+  - New public symbols `SearchBudget` and `SearchBudgetResetMiddleware`; the
+    `create_searxng_search_tool` factory gains `min_request_interval` and
+    `budget` parameters. Both new factory parameters default to off/unlimited,
+    so behavior is backward compatible.
+
 ## [0.1.3] - 2026-07-15
 
 ### Added
@@ -85,7 +106,9 @@ Initial release.
 [#1]: https://github.com/giurlanda/deep-search-agent/issues/1
 [#9]: https://github.com/giurlanda/deep-search-agent/issues/9
 [#11]: https://github.com/giurlanda/deep-search-agent/issues/11
-[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.3...HEAD
+[#13]: https://github.com/giurlanda/deep-search-agent/issues/13
+[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.0...v0.1.1

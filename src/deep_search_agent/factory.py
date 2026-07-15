@@ -24,7 +24,10 @@ from typing import TYPE_CHECKING, Any
 from deepagents import RubricMiddleware, create_deep_agent
 from deepagents.backends import StateBackend
 
-from deep_search_agent.middleware import DefaultRubricMiddleware
+from deep_search_agent.middleware import (
+    DefaultRubricMiddleware,
+    SearchBudgetResetMiddleware,
+)
 from deep_search_agent.prompts import DEEP_SEARCH_RUBRIC, ORCHESTRATOR_PROMPT_TEMPLATE
 from deep_search_agent.subagents import (
     build_fact_check_subagent,
@@ -32,7 +35,7 @@ from deep_search_agent.subagents import (
     build_search_subagent,
 )
 from deep_search_agent.tools import create_fetch_url_tool, create_searxng_search_tool
-from deep_search_agent.tools.search import DEFAULT_SEARXNG_BASE_URL
+from deep_search_agent.tools.search import DEFAULT_SEARXNG_BASE_URL, SearchBudget
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -52,6 +55,13 @@ def _validate_positive(name: str, value: int) -> None:
         raise ValueError(msg)
 
 
+def _validate_positive_number(name: str, value: float) -> None:
+    """Raise ``ValueError`` unless ``value`` is a positive real number."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+        msg = f"{name} must be a positive number, got {value!r}"
+        raise ValueError(msg)
+
+
 def create_deep_search_agent(
     *,
     model: str | BaseChatModel,
@@ -60,6 +70,8 @@ def create_deep_search_agent(
     max_urls_to_scrape_per_cycle: int = 3,
     searxng_base_url: str = DEFAULT_SEARXNG_BASE_URL,
     searxng_engines: Sequence[str] | None = None,
+    searxng_rate_limit: float | None = None,
+    searxng_budget: int | None = None,
     request_timeout: float = 15.0,
     max_content_chars_per_page: int = 20_000,
     search_tools: Sequence[BaseTool] | None = None,
@@ -99,6 +111,18 @@ def create_deep_search_agent(
             built-in search tool.
         searxng_engines: Optional SearxNG engine allowlist
             (e.g. ``["duckduckgo", "wikipedia"]``).
+        searxng_rate_limit: Minimum number of seconds between two SearxNG
+            requests. Sub-agents may run searches concurrently through
+            deepagents' thread pool, so this is enforced by a thread-safe
+            min-interval limiter shared by the built-in search tool. When a
+            request would have to wait longer than ``request_timeout`` for a
+            free slot, the tool returns an ``ERROR: ...`` string instead of
+            performing it. ``None`` (default) disables rate limiting.
+        searxng_budget: Maximum number of SearxNG search operations allowed in
+            a single research cycle. Once exhausted, the search tool returns an
+            ``ERROR: ...`` string telling the model no budget is left; the
+            counter is reset at each research-cycle boundary of the evaluator
+            loop. ``None`` (default) means unlimited.
         request_timeout: HTTP timeout (seconds) for both the search and the
             fetch tools.
         max_content_chars_per_page: Truncation limit for content extracted
@@ -138,8 +162,9 @@ def create_deep_search_agent(
         The compiled deep agent graph, ready for ``invoke`` / ``astream``.
 
     Raises:
-        ValueError: If ``model`` is missing, a budget parameter is not a
-            positive integer, or a reserved sub-agent name is reused.
+        ValueError: If ``model`` is missing, an integer budget parameter is
+            not a positive integer, ``searxng_rate_limit`` is not a positive
+            number, or a reserved sub-agent name is reused.
     """
     if model is None:
         msg = (
@@ -151,6 +176,10 @@ def create_deep_search_agent(
     _validate_positive("max_research_cycles", max_research_cycles)
     _validate_positive("max_search_results_per_query", max_search_results_per_query)
     _validate_positive("max_urls_to_scrape_per_cycle", max_urls_to_scrape_per_cycle)
+    if searxng_rate_limit is not None:
+        _validate_positive_number("searxng_rate_limit", searxng_rate_limit)
+    if searxng_budget is not None:
+        _validate_positive("searxng_budget", searxng_budget)
 
     # Resolve the shared backend up front so the orchestrator and the
     # sub-agents provably operate on the same virtual filesystem: default to a
@@ -159,11 +188,17 @@ def create_deep_search_agent(
     effective_backend = backend if backend is not None else StateBackend()
 
     # --- Tools for the sub-agents -----------------------------------------
+    # The budget lives in the tool closure so it is shared across the
+    # (possibly concurrent) sub-agents that call the search tool; a middleware
+    # resets it at each research-cycle boundary (see below).
+    search_budget = SearchBudget(searxng_budget) if searxng_budget is not None else None
     searxng_tool = create_searxng_search_tool(
         base_url=searxng_base_url,
         engines=searxng_engines,
         timeout=request_timeout,
         max_results=max_search_results_per_query,
+        min_request_interval=searxng_rate_limit,
+        budget=search_budget,
     )
     all_search_tools: list[BaseTool] = [searxng_tool, *(search_tools or [])]
     fetch_tool = create_fetch_url_tool(
@@ -203,6 +238,11 @@ def create_deep_search_agent(
     agent_middleware.append(
         RubricMiddleware(model=model, max_iterations=max_research_cycles)
     )
+    # Reset the per-cycle search budget at each research-cycle boundary. Placed
+    # after RubricMiddleware so it participates in the same before/after_agent
+    # phases that delimit a research cycle.
+    if search_budget is not None:
+        agent_middleware.append(SearchBudgetResetMiddleware(search_budget))
     agent_middleware.extend(middleware)
 
     # --- Orchestrator --------------------------------------------------------

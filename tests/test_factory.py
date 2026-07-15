@@ -230,11 +230,56 @@ def test_explicit_backend_is_propagated(captured):
         {"max_research_cycles": -1},
         {"max_search_results_per_query": 0},
         {"max_urls_to_scrape_per_cycle": 0},
+        {"searxng_budget": 0},
+        {"searxng_budget": -3},
     ],
 )
 def test_invalid_budgets_raise(kwargs):
     with pytest.raises(ValueError, match="positive integer"):
         create_deep_search_agent(model=make_fake_model(), **kwargs)
+
+
+@pytest.mark.parametrize("rate_limit", [0, -0.5])
+def test_invalid_searxng_rate_limit_raises(rate_limit):
+    with pytest.raises(ValueError, match="positive number"):
+        create_deep_search_agent(model=make_fake_model(), searxng_rate_limit=rate_limit)
+
+
+def test_searxng_budget_adds_reset_middleware(captured):
+    from deep_search_agent import SearchBudgetResetMiddleware
+
+    create_deep_search_agent(model=make_fake_model(), searxng_budget=5)
+
+    assert any(
+        isinstance(mw, SearchBudgetResetMiddleware) for mw in captured["middleware"]
+    )
+
+
+def test_no_budget_middleware_by_default(captured):
+    from deep_search_agent import SearchBudgetResetMiddleware
+
+    create_deep_search_agent(model=make_fake_model())
+
+    assert not any(
+        isinstance(mw, SearchBudgetResetMiddleware) for mw in captured["middleware"]
+    )
+
+
+def test_reset_middleware_follows_rubric_middleware(captured):
+    from deep_search_agent import SearchBudgetResetMiddleware
+
+    create_deep_search_agent(model=make_fake_model(), searxng_budget=5)
+
+    middleware = captured["middleware"]
+    rubric_idx = next(
+        i for i, mw in enumerate(middleware) if isinstance(mw, RubricMiddleware)
+    )
+    reset_idx = next(
+        i
+        for i, mw in enumerate(middleware)
+        if isinstance(mw, SearchBudgetResetMiddleware)
+    )
+    assert reset_idx > rubric_idx
 
 
 def test_missing_model_raises():
