@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-07-15
+
+### Added
+
+- `subagents_middleware` parameter on `create_deep_search_agent` ([#11]):
+  extra middleware (e.g. logging, rate limiting) injected into each built-in
+  sub-agent (`search-agent`, `fetch-agent`, `fact-check-agent`) via their
+  `SubAgent.middleware` field. Sub-agents passed via `subagents` are
+  caller-owned and left untouched.
+
 ## [0.1.2] - 2026-07-15
 
 ### Added
@@ -74,7 +84,9 @@ Initial release.
 
 [#1]: https://github.com/giurlanda/deep-search-agent/issues/1
 [#9]: https://github.com/giurlanda/deep-search-agent/issues/9
-[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.2...HEAD
+[#11]: https://github.com/giurlanda/deep-search-agent/issues/11
+[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/giurlanda/deep-search-agent/releases/tag/v0.1.0

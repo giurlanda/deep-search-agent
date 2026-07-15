@@ -74,6 +74,7 @@ Deep-search-specific parameters:
 | `search_tools` | `None` | Additional search tools for search-agent and fact-check-agent (e.g. Tavily, RAG retrieval) |
 | `rubric` | `DEEP_SEARCH_RUBRIC` | Custom evaluation rubric |
 | `auto_rubric` | `True` | Auto-inject the rubric into the state on every invoke |
+| `subagents_middleware` | `()` | Extra middleware injected into each built-in sub-agent (search-agent, fetch-agent, fact-check-agent) |
 | `subagents` | `None` | Extra sub-agents, added to the built-in ones |
 | `backend` | `StateBackend()` | Filesystem backend shared by the orchestrator and every sub-agent |
 
