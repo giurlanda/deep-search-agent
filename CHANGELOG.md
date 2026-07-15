@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-07-15
+
+### Added
+
+- Explicit `backend` parameter on `create_deep_search_agent` ([#9]): the
+  factory now resolves a single filesystem backend (defaulting to a shared
+  `StateBackend` when none is given, otherwise propagating the caller's
+  instance) and hands it to `create_deep_agent`, so the orchestrator and every
+  sub-agent provably operate on the same virtual filesystem and
+  `findings/<source-slug>.md` files flow back to the orchestrator. Behavior is
+  backward compatible; `backend` is no longer an undocumented pass-through
+  kwarg.
+
 ## [0.1.1] - 2026-07-15
 
 ### Added
@@ -60,6 +73,8 @@ Initial release.
   Playwright end-to-end tests.
 
 [#1]: https://github.com/giurlanda/deep-search-agent/issues/1
-[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.1...HEAD
+[#9]: https://github.com/giurlanda/deep-search-agent/issues/9
+[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/giurlanda/deep-search-agent/releases/tag/v0.1.0
