@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from deepagents import SubAgent
+    from langchain.agents.middleware.types import AgentMiddleware
     from langchain_core.tools import BaseTool
 
 SEARCH_AGENT_NAME = "search-agent"
@@ -39,6 +40,7 @@ def build_search_subagent(
     search_tools: Sequence[BaseTool],
     *,
     max_search_results_per_query: int,
+    middleware: Sequence[AgentMiddleware] = (),
 ) -> SubAgent:
     """Build the web-search sub-agent definition.
 
@@ -47,11 +49,14 @@ def build_search_subagent(
             plus any user-provided extra search tools).
         max_search_results_per_query: Result budget per query, embedded in
             the agent's instructions.
+        middleware: Extra middleware to attach to this sub-agent (e.g.
+            logging, rate limiting), run before deepagents' default
+            sub-agent middleware stack.
 
     Returns:
         A ``SubAgent`` mapping for ``create_deep_agent(subagents=...)``.
     """
-    return {
+    agent: SubAgent = {
         "name": SEARCH_AGENT_NAME,
         "description": (
             "Runs targeted web searches for a specific sub-question, "
@@ -64,19 +69,29 @@ def build_search_subagent(
         ),
         "tools": list(search_tools),
     }
+    if middleware:
+        agent["middleware"] = list(middleware)
+    return agent
 
 
-def build_fetch_subagent(fetch_tool: BaseTool) -> SubAgent:
+def build_fetch_subagent(
+    fetch_tool: BaseTool,
+    *,
+    middleware: Sequence[AgentMiddleware] = (),
+) -> SubAgent:
     """Build the fetch/reader sub-agent definition.
 
     Args:
         fetch_tool: Tool that downloads a URL and extracts its main content
             (HTML via trafilatura, PDFs via pypdf).
+        middleware: Extra middleware to attach to this sub-agent (e.g.
+            logging, rate limiting), run before deepagents' default
+            sub-agent middleware stack.
 
     Returns:
         A ``SubAgent`` mapping for ``create_deep_agent(subagents=...)``.
     """
-    return {
+    agent: SubAgent = {
         "name": FETCH_AGENT_NAME,
         "description": (
             "Downloads specific URLs (HTML pages or PDF documents), extracts "
@@ -87,22 +102,30 @@ def build_fetch_subagent(fetch_tool: BaseTool) -> SubAgent:
         "system_prompt": FETCH_AGENT_PROMPT,
         "tools": [fetch_tool],
     }
+    if middleware:
+        agent["middleware"] = list(middleware)
+    return agent
 
 
 def build_fact_check_subagent(
     search_tools: Sequence[BaseTool],
     fetch_tool: BaseTool,
+    *,
+    middleware: Sequence[AgentMiddleware] = (),
 ) -> SubAgent:
     """Build the fact-checking sub-agent definition.
 
     Args:
         search_tools: Search tools used to locate independent sources.
         fetch_tool: Fetch tool used to read those sources in full.
+        middleware: Extra middleware to attach to this sub-agent (e.g.
+            logging, rate limiting), run before deepagents' default
+            sub-agent middleware stack.
 
     Returns:
         A ``SubAgent`` mapping for ``create_deep_agent(subagents=...)``.
     """
-    return {
+    agent: SubAgent = {
         "name": FACT_CHECK_AGENT_NAME,
         "description": (
             "Verifies one or more claims against multiple independent "
@@ -113,3 +136,6 @@ def build_fact_check_subagent(
         "system_prompt": FACT_CHECK_AGENT_PROMPT,
         "tools": [*search_tools, fetch_tool],
     }
+    if middleware:
+        agent["middleware"] = list(middleware)
+    return agent

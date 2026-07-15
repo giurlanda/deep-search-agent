@@ -110,6 +110,46 @@ def test_user_middleware_appended_after_rubric(captured):
     assert captured["middleware"][-1] is sentinel
 
 
+def test_subagents_middleware_injected_into_builtin_subagents(captured):
+    class Sentinel(DefaultRubricMiddleware):
+        pass
+
+    sentinel = Sentinel("- x")
+    create_deep_search_agent(model=make_fake_model(), subagents_middleware=[sentinel])
+
+    for agent in captured["subagents"]:
+        assert agent["middleware"] == [sentinel]
+
+
+def test_subagents_middleware_not_injected_into_user_subagents(captured):
+    class Sentinel(DefaultRubricMiddleware):
+        pass
+
+    rag_agent = {
+        "name": "rag-agent",
+        "description": "Internal knowledge base retrieval",
+        "system_prompt": "Retrieve from the vector store.",
+    }
+    sentinel = Sentinel("- x")
+
+    create_deep_search_agent(
+        model=make_fake_model(),
+        subagents=[rag_agent],
+        subagents_middleware=[sentinel],
+    )
+
+    user_agent = captured["subagents"][-1]
+    assert user_agent["name"] == "rag-agent"
+    assert "middleware" not in user_agent
+
+
+def test_no_subagents_middleware_by_default(captured):
+    create_deep_search_agent(model=make_fake_model())
+
+    for agent in captured["subagents"]:
+        assert "middleware" not in agent
+
+
 def test_budgets_are_embedded_in_prompts(captured):
     create_deep_search_agent(
         model=make_fake_model(),

@@ -67,6 +67,7 @@ def create_deep_search_agent(
     auto_rubric: bool = True,
     system_prompt: str | SystemMessage | None = None,
     middleware: Sequence[AgentMiddleware] = (),
+    subagents_middleware: Sequence[AgentMiddleware] = (),
     subagents: Sequence[Any] | None = None,
     backend: BackendProtocol | BackendFactory | None = None,
     **create_deep_agent_kwargs: Any,
@@ -115,6 +116,11 @@ def create_deep_search_agent(
             to the built-in deep-search orchestrator prompt parametrized
             with the cycle/URL budgets.
         middleware: Extra middleware appended after the rubric middleware.
+        subagents_middleware: Extra middleware injected into each built-in
+            sub-agent (``search-agent``, ``fetch-agent``,
+            ``fact-check-agent``), e.g. for logging or rate limiting.
+            Sub-agents passed via ``subagents`` are caller-owned and left
+            untouched.
         subagents: Extra sub-agents (e.g. a RAG retrieval agent over an
             internal knowledge base) added alongside the built-in
             ``search-agent``, ``fetch-agent``, and ``fact-check-agent``.
@@ -170,9 +176,12 @@ def create_deep_search_agent(
         build_search_subagent(
             all_search_tools,
             max_search_results_per_query=max_search_results_per_query,
+            middleware=subagents_middleware,
         ),
-        build_fetch_subagent(fetch_tool),
-        build_fact_check_subagent(all_search_tools, fetch_tool),
+        build_fetch_subagent(fetch_tool, middleware=subagents_middleware),
+        build_fact_check_subagent(
+            all_search_tools, fetch_tool, middleware=subagents_middleware
+        ),
     ]
     reserved_names = {agent["name"] for agent in built_in_subagents}
     extra_subagents = list(subagents or [])
