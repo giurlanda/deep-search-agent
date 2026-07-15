@@ -102,6 +102,7 @@ and must find relevant, sourced results for it.
 - If a search fails (network error, rate limit), retry once with a
   reformulated query, then report the failure instead of blocking.
 - Never fabricate results: report only what the search tools returned.
+- DO NOT perform other web searches if search budget is exhausted.
 """
 """Search sub-agent system prompt template.
 
