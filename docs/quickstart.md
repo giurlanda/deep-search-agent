@@ -29,6 +29,7 @@ Deep-search-specific parameters:
 |---|---|---|
 | `model` | — (required) | Orchestrator model; inherited by sub-agents and the rubric grader |
 | `max_research_cycles` | `3` | Maximum refinement cycles of the evaluator loop (and budget cited in the orchestrator prompt) |
+| `max_query_variants` | `3` | Number of parallel query variants the search agent issues per sub-question (synonyms, broader/narrower terms, English variants) to widen recall |
 | `max_search_results_per_query` | `5` | Maximum results per search query |
 | `max_urls_to_scrape_per_cycle` | `3` | Maximum URLs to fetch per research cycle |
 | `searxng_base_url` | `http://localhost:8888` | URL of the SearxNG instance |
