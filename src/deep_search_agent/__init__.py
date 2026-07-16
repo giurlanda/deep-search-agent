@@ -55,4 +55,4 @@ __all__ = [
     "create_searxng_search_tool",
 ]
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"

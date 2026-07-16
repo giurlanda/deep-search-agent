@@ -44,9 +44,28 @@ yourself, but to plan, delegate to sub-agents, and synthesize their results.
    after {max_research_cycles} cycles, proceed to synthesis anyway and
    explicitly declare the remaining gaps.
 
-6. SYNTHESIZE by reading every file in /findings/. Every claim in the final
-   answer must be traceable to a specific file/source: cite the source URL
-   next to the claim. Never invent claims that are not present in /findings/.
+6. OUTLINE the report before writing it. Write `/report/outline.md` with the
+   sections the answer will have, derived from the researched perspectives or
+   sub-questions (todos). Reserve an executive summary as the first section and
+   a "Gaps & limitations" section plus a "Sources" section at the end. Scale
+   depth to the question's complexity: a simple question gets a short outline
+   with few sections, not an inflated one; a broad or multi-faceted question
+   gets one section per perspective/sub-question.
+
+7. SYNTHESIZE SECTION BY SECTION. For each section in the outline (other than
+   the executive summary and the trailing Gaps/Sources sections), read the
+   relevant files in /findings/ and write that section. Every factual claim
+   must be traceable to a specific source: mark it with a numbered citation
+   `[n]` keyed to the bibliography you assemble in the next step. Never invent
+   claims that are not present in /findings/.
+
+8. ASSEMBLE the final answer by combining, in order: the executive summary (a
+   few sentences capturing the key conclusions), the synthesized sections, the
+   "Gaps & limitations" section (state explicitly what could not be answered
+   and why — this section is always present, even if empty it says "none"),
+   and a numbered "Sources" bibliography. Each bibliography entry is
+   `[n] <title or description> — <URL> (<date>, when available)`, and every
+   `[n]` citation used in the sections must resolve to exactly one entry.
 
 ## Shared source index
 
@@ -74,8 +93,11 @@ the rubric found it lacking, do NOT restart from step 1:
    instruct sub-agents to diversify domains and sources relative to the URLs
    already in `/findings/_sources.md`, so refinement adds new evidence instead
    of repeating prior searches and fetches.
-5. Re-synthesize the full answer: fix the flagged points and preserve the
-   parts that already satisfied the rubric.
+5. Update `/report/outline.md` if the gaps require new or reworked sections,
+   then re-synthesize and re-assemble the full answer (steps 6-8): fix the
+   flagged points and preserve the sections that already satisfied the rubric.
+   Keep the numbered citations and the "Sources" bibliography consistent after
+   the edits.
 
 ## Rules
 - Never fetch pages yourself: always delegate.
@@ -201,10 +223,16 @@ DEEP_SEARCH_RUBRIC = """\
 - When sources disagree on a point, the answer reports both positions instead of silently picking one.
 - The sources used are relevant to the question and, when the question is time-sensitive, recent enough.
 - The answer is written in the same language as the user's question and is coherent and well organized.
+- The answer opens with a concise executive summary of the key conclusions.
+- The answer is organized into sections that cover every planned perspective/sub-question, with depth proportional to the question's complexity.
+- The answer includes an explicit "Gaps & limitations" section stating what could not be answered (or that there are none).
+- The answer ends with a numbered bibliography whose entries (URL and, when available, date) correspond one-to-one with the in-text `[n]` citations.
 """
 """Default grading rubric used by the evaluator/critic loop.
 
-Generic on purpose: it constrains completeness, source traceability, and
-contradiction handling without assuming a specific research domain. Pass a
-custom ``rubric`` to the factory (or in the invocation state) to override it.
+Generic on purpose: it constrains completeness, source traceability,
+contradiction handling, and report structure (executive summary, sectioned
+coverage, an explicit gaps section, and a numbered bibliography) without
+assuming a specific research domain. Pass a custom ``rubric`` to the factory
+(or in the invocation state) to override it.
 """

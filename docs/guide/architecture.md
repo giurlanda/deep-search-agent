@@ -12,7 +12,10 @@ evaluator loop** pattern on top of
    an **isolated context**.
 3. Sub-agents write sourced findings to the shared virtual filesystem as
    `findings/<source-slug>.md` (URL, date, claims).
-4. The orchestrator **synthesizes** a cited answer from those findings.
+4. The orchestrator **synthesizes** a cited answer from those findings,
+   outline-first: it drafts `report/outline.md`, writes each section against the
+   relevant findings, then assembles an executive summary, the sections, a gaps
+   section, and a numbered bibliography.
 5. The **evaluator/critic** (`RubricMiddleware`) grades the answer against a
    rubric and, if it falls short, re-runs the orchestrator — up to
    `max_research_cycles` times.

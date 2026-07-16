@@ -175,6 +175,29 @@ def test_refinement_instructions_in_orchestrator_prompt(captured):
     assert "research/gaps.md" in prompt
 
 
+def test_outline_first_synthesis_in_orchestrator_prompt(captured):
+    create_deep_search_agent(model=make_fake_model())
+
+    prompt = captured["system_prompt"]
+    # Synthesis is split into outline -> section-by-section -> assembly, each
+    # writing/using the report structure and numbered citations.
+    assert "report/outline.md" in prompt
+    assert "OUTLINE" in prompt
+    assert "SYNTHESIZE SECTION BY SECTION" in prompt
+    assert "ASSEMBLE" in prompt
+    assert "executive summary" in prompt
+    assert "Gaps & limitations" in prompt
+
+
+def test_rubric_grades_report_structure():
+    # The default rubric must grade structure/organization, not only
+    # completeness and traceability.
+    assert "executive summary" in DEEP_SEARCH_RUBRIC
+    assert "Gaps & limitations" in DEEP_SEARCH_RUBRIC
+    assert "numbered bibliography" in DEEP_SEARCH_RUBRIC
+    assert "perspective/sub-question" in DEEP_SEARCH_RUBRIC
+
+
 def test_shared_source_index_in_prompts(captured):
     create_deep_search_agent(model=make_fake_model())
 
