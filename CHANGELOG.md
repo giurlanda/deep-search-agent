@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-07-16
+
+### Changed
+
+- The orchestrator's final synthesis is now outline-first. The single
+  free-form SYNTHESIZE step in `ORCHESTRATOR_PROMPT_TEMPLATE` is split into
+  three explicit steps: **outline** (write `report/outline.md` with sections
+  derived from the researched perspectives/sub-questions, depth scaled to the
+  question's complexity), **section-by-section synthesis** with numbered `[n]`
+  citations, and **assembly** into an executive summary, the sections, a
+  required "Gaps & limitations" section, and a numbered "Sources"
+  bibliography. Refinement cycles update the outline and keep the citations and
+  bibliography consistent. `DEEP_SEARCH_RUBRIC` gains criteria grading the
+  executive summary, per-section coverage of every planned
+  perspective/sub-question, the explicit gaps section, and a numbered
+  bibliography consistent with in-text citations. Prompt-only change; no public
+  API change ([#3]).
+
 ## [0.2.2] - 2026-07-16
 
 ### Added
@@ -160,12 +178,14 @@ Initial release.
 
 [#1]: https://github.com/giurlanda/deep-search-agent/issues/1
 [#2]: https://github.com/giurlanda/deep-search-agent/issues/2
+[#3]: https://github.com/giurlanda/deep-search-agent/issues/3
 [#4]: https://github.com/giurlanda/deep-search-agent/issues/4
 [#9]: https://github.com/giurlanda/deep-search-agent/issues/9
 [#11]: https://github.com/giurlanda/deep-search-agent/issues/11
 [#13]: https://github.com/giurlanda/deep-search-agent/issues/13
 [#15]: https://github.com/giurlanda/deep-search-agent/issues/15
-[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.4...v0.2.0
