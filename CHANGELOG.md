@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-07-16
+
+### Added
+
+- `internet_search` (the SearxNG-backed tool built by
+  `create_searxng_search_tool`) now accepts optional per-call `category` and
+  `time_range` arguments, forwarded to the SearxNG JSON API as `categories`
+  and `time_range`. `time_range` is validated against `day`/`week`/`month`/
+  `year` and an invalid value returns an `ERROR:` string without hitting the
+  network. The `search-agent` prompt now instructs the agent to set
+  `time_range` for time-sensitive sub-questions and `category="science"` for
+  academic/research ones, so different sub-questions can target recent or
+  scholarly sources instead of the same undifferentiated web search ([#4]).
+
+### Changed
+
+- `README.md` now shows license, version, and Python-version badges and links
+  to the published documentation on GitHub Pages.
+
 ## [0.2.1] - 2026-07-16
 
 ### Changed
@@ -141,11 +160,13 @@ Initial release.
 
 [#1]: https://github.com/giurlanda/deep-search-agent/issues/1
 [#2]: https://github.com/giurlanda/deep-search-agent/issues/2
+[#4]: https://github.com/giurlanda/deep-search-agent/issues/4
 [#9]: https://github.com/giurlanda/deep-search-agent/issues/9
 [#11]: https://github.com/giurlanda/deep-search-agent/issues/11
 [#13]: https://github.com/giurlanda/deep-search-agent/issues/13
 [#15]: https://github.com/giurlanda/deep-search-agent/issues/15
-[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.3...v0.1.4

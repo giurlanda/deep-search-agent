@@ -1,8 +1,14 @@
 # deep-search-agent
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Version](https://img.shields.io/github/v/tag/giurlanda/deep-search-agent?sort=semver&label=version)](https://github.com/giurlanda/deep-search-agent/tags)
+[![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
+
 A Python library for deep internet searches (deep search), similar to the deep
 research features of ChatGPT and Claude. Built on top of LangChain's
 [deepagents](https://docs.langchain.com/oss/python/deepagents).
+
+📖 **Documentation:** <https://giurlanda.github.io/deep-search-agent/>
 
 ## Architecture
 

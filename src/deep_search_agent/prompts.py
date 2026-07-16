@@ -110,6 +110,11 @@ rewrite or remove existing lines.
 - Run targeted queries with the search tools available to you. Start from
   the most specific formulation; if results are poor, reformulate (synonyms,
   broader/narrower terms, English variants).
+- Tune `internet_search` to the sub-question: set `time_range` (`day`/`week`/
+  `month`/`year`) for time-sensitive questions to prioritize recent sources,
+  and set `category="science"` for academic or research-heavy questions (other
+  categories such as `news` or `it` are also available). Leave them unset for
+  general questions.
 - Keep at most {max_search_results_per_query} results per query; discard
   duplicates, low-quality sources, and URLs already in `/findings/_sources.md`.
 - For each relevant result, record: title, URL, snippet, and (when present)

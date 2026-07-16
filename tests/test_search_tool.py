@@ -55,6 +55,49 @@ def test_no_engines_param_by_default(fake_httpx_get):
     assert "engines" not in kwargs["params"]
 
 
+def test_category_is_forwarded_as_param(fake_httpx_get):
+    fake_httpx_get.response = FakeResponse(json_data=make_searxng_payload(1))
+    tool = create_searxng_search_tool()
+
+    tool.invoke({"query": "q", "category": "science"})
+
+    _, kwargs = fake_httpx_get.calls[0]
+    assert kwargs["params"]["categories"] == "science"
+
+
+def test_time_range_is_forwarded_as_param(fake_httpx_get):
+    fake_httpx_get.response = FakeResponse(json_data=make_searxng_payload(1))
+    tool = create_searxng_search_tool()
+
+    tool.invoke({"query": "q", "time_range": "week"})
+
+    _, kwargs = fake_httpx_get.calls[0]
+    assert kwargs["params"]["time_range"] == "week"
+
+
+def test_no_category_or_time_range_param_by_default(fake_httpx_get):
+    fake_httpx_get.response = FakeResponse(json_data=make_searxng_payload(1))
+    tool = create_searxng_search_tool()
+
+    tool.invoke({"query": "q"})
+
+    _, kwargs = fake_httpx_get.calls[0]
+    assert "categories" not in kwargs["params"]
+    assert "time_range" not in kwargs["params"]
+
+
+def test_invalid_time_range_returns_error_without_request(fake_httpx_get):
+    fake_httpx_get.response = FakeResponse(json_data=make_searxng_payload(1))
+    tool = create_searxng_search_tool()
+
+    output = tool.invoke({"query": "q", "time_range": "decade"})
+
+    assert output.startswith("ERROR:")
+    assert "invalid time_range" in output
+    # An invalid filter must be rejected before hitting the network.
+    assert fake_httpx_get.calls == []
+
+
 def test_empty_results_returns_hint(fake_httpx_get):
     fake_httpx_get.response = FakeResponse(json_data={"results": []})
     tool = create_searxng_search_tool()
