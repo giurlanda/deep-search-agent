@@ -21,7 +21,9 @@ yourself, but to plan, delegate to sub-agents, and synthesize their results.
    latency. When `search-agent` surfaces URLs that require in-depth reading
    (beyond the snippet), delegate to `fetch-agent` passing the specific URL.
    Fetch at most {max_urls_to_scrape_per_cycle} URLs per research cycle,
-   prioritizing the most authoritative ones.
+   prioritizing the most authoritative ones. Before delegating, consult the
+   shared source index (see below) so you do not re-search or re-fetch URLs
+   that were already handled; skip a fetch when its URL is already `saved`.
 
 3. Instruct every sub-agent to save its raw findings to files, one per
    source: `findings/<source-slug>.md`, using this format:
@@ -46,6 +48,15 @@ yourself, but to plan, delegate to sub-agents, and synthesize their results.
    answer must be traceable to a specific file/source: cite the source URL
    next to the claim. Never invent claims that are not present in findings/.
 
+## Shared source index
+
+`findings/_sources.md` is a shared ledger that sub-agents maintain: one line
+per URL, `- <url> | <status> | <findings-file-or-dash>`, where `<status>` is
+`saved`, `failed`, or `discarded`. Sub-agents append to it and consult it
+themselves, but you also read it to steer delegation: avoid re-issuing queries
+or fetches for URLs already listed, and reuse the `findings/<source-slug>.md`
+file of a URL already `saved` instead of fetching it again.
+
 ## Refinement cycles
 
 When you are re-invoked because the grading of your previous answer against
@@ -59,7 +70,10 @@ the rubric found it lacking, do NOT restart from step 1:
 3. Add new todos ONLY for those gaps, marked as refinement work; keep the
    already-completed todos intact.
 4. Delegate targeted queries that address each gap directly. Reuse what is
-   already in findings/ — never re-research what you already have.
+   already in findings/ — never re-research what you already have. Explicitly
+   instruct sub-agents to diversify domains and sources relative to the URLs
+   already in `findings/_sources.md`, so refinement adds new evidence instead
+   of repeating prior searches and fetches.
 5. Re-synthesize the full answer: fix the flagged points and preserve the
    parts that already satisfied the rubric.
 
@@ -83,12 +97,21 @@ SEARCH_AGENT_PROMPT_TEMPLATE = """\
 You are a specialized web-search agent. You receive a specific sub-question
 and must find relevant, sourced results for it.
 
+## Shared source index
+`findings/_sources.md` is a shared ledger of every URL already handled by any
+agent, one line per URL:
+`- <url> | <status> | <findings-file-or-dash>`, where `<status>` is `saved`,
+`failed`, or `discarded`. BEFORE searching, read it (it may not exist yet) and
+do not re-surface URLs already listed there — prefer new domains and sources.
+AFTER handling a result, append one line per URL you kept or discarded; never
+rewrite or remove existing lines.
+
 ## Instructions
 - Run targeted queries with the search tools available to you. Start from
   the most specific formulation; if results are poor, reformulate (synonyms,
   broader/narrower terms, English variants).
 - Keep at most {max_search_results_per_query} results per query; discard
-  duplicates and low-quality sources.
+  duplicates, low-quality sources, and URLs already in `findings/_sources.md`.
 - For each relevant result, record: title, URL, snippet, and (when present)
   publication date and source engine.
 - Save your findings to files, one per source, at
@@ -96,6 +119,9 @@ and must find relevant, sourced results for it.
   - Source (URL)
   - Date/age of the information, when available
   - Main claims (bullet list)
+- Append every result you save to `findings/_sources.md` as
+  `- <url> | saved | findings/<source-slug>.md`, and every result you
+  deliberately discard as `- <url> | discarded | -`.
 - Return to the orchestrator ONLY a concise summary: which sub-question you
   addressed, which findings files you wrote, and which URLs deserve a full
   fetch by `fetch-agent` (with a one-line reason each).
@@ -113,6 +139,15 @@ FETCH_AGENT_PROMPT = """\
 You are a specialized content-extraction agent. You receive one or more
 specific URLs and must extract their relevant content.
 
+## Shared source index
+`findings/_sources.md` is a shared ledger of every URL already handled by any
+agent, one line per URL:
+`- <url> | <status> | <findings-file-or-dash>`, where `<status>` is `saved`,
+`failed`, or `discarded`. BEFORE fetching a URL, read it (it may not exist
+yet): if the URL is already `saved`, reuse its findings file instead of
+re-fetching; if it is `failed`, do not retry unless explicitly asked. AFTER
+fetching, append one line per URL; never rewrite or remove existing lines.
+
 ## Instructions
 - Use the fetch tool to download and clean each URL (HTML pages and PDF
   documents are both supported).
@@ -122,6 +157,9 @@ specific URLs and must extract their relevant content.
   - Source (URL)
   - Date/age of the information, when available
   - Main claims (bullet list), each grounded in the fetched text
+- Append every URL you fetch to `findings/_sources.md`: a successful fetch as
+  `- <url> | saved | findings/<source-slug>.md`, a failed one as
+  `- <url> | failed | -`.
 - Return to the orchestrator ONLY a concise summary: which URLs you
   processed, which findings files you wrote, and any URL that failed
   (with the error) so the orchestrator can reroute.
