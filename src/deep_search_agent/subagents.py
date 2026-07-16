@@ -11,7 +11,7 @@ ready to be passed to ``create_deep_agent(subagents=...)``:
 
 Sub-agents run with isolated context windows, so raw page content never
 pollutes the orchestrator's memory; only their synthesized reports (and the
-``findings/`` files they write through the shared filesystem backend) flow
+``/findings/`` files they write through the shared filesystem backend) flow
 back up.
 """
 
@@ -66,7 +66,7 @@ def build_search_subagent(
         "description": (
             "Runs targeted web searches for a specific sub-question, issuing "
             "several query variants in parallel to widen recall, and saves "
-            "sourced findings to findings/<source-slug>.md. Returns a concise "
+            "sourced findings to /findings/<source-slug>.md. Returns a concise "
             "summary plus the URLs worth a full fetch."
         ),
         "system_prompt": SEARCH_AGENT_PROMPT_TEMPLATE.format(
@@ -102,7 +102,7 @@ def build_fetch_subagent(
         "description": (
             "Downloads specific URLs (HTML pages or PDF documents), extracts "
             "and cleans their main content, and saves relevant claims to "
-            "findings/<source-slug>.md. Use when a search snippet is not "
+            "/findings/<source-slug>.md. Use when a search snippet is not "
             "enough and the full page must be read."
         ),
         "system_prompt": FETCH_AGENT_PROMPT,
@@ -136,8 +136,10 @@ def build_fact_check_subagent(
         "description": (
             "Verifies one or more claims against multiple independent "
             "sources and returns a verdict per claim (confirmed / contested "
-            "/ unverifiable) with evidence. Use when sources contradict each "
-            "other or a critical claim rests on a single source."
+            "/ unverifiable) with a one-line rationale, saving the full "
+            "evidence to /findings/fact-check-<claim-slug>.md. Use when "
+            "sources contradict each other or a critical claim rests on a "
+            "single source."
         ),
         "system_prompt": FACT_CHECK_AGENT_PROMPT,
         "tools": [*search_tools, fetch_tool],

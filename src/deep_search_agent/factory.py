@@ -9,7 +9,7 @@ architecture on top of ``deepagents``:
   search tools), ``fetch-agent`` (trafilatura + pypdf), and
   ``fact-check-agent``; callers can add more via ``subagents``.
 - **Shared scratchpad** = deepagents' filesystem (pluggable ``backend``),
-  where every sub-agent writes ``findings/<source-slug>.md`` files with
+  where every sub-agent writes ``/findings/<source-slug>.md`` files with
   provenance.
 - **Evaluator/critic loop** = ``RubricMiddleware`` (deepagents beta), which
   grades the final answer against a rubric and re-runs the orchestrator up to
@@ -165,7 +165,7 @@ def create_deep_search_agent(
             internal knowledge base) added alongside the built-in
             ``search-agent``, ``fetch-agent``, and ``fact-check-agent``.
         backend: Filesystem backend shared by the orchestrator and every
-            sub-agent, so that ``findings/<source-slug>.md`` files written by
+            sub-agent, so that ``/findings/<source-slug>.md`` files written by
             a sub-agent flow back to the orchestrator on the same virtual
             filesystem. When omitted, a single :class:`~deepagents.backends.StateBackend`
             instance is created and shared; when provided, that exact instance
