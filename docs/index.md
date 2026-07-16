@@ -10,6 +10,7 @@ The `create_deep_search_agent` factory returns a deep agent configured with the
 | Component | Implementation |
 |---|---|
 | Orchestrator | Main agent (`create_deep_agent`): decomposes the query with `write_todos`, delegates, synthesizes with citations |
+| `perspective-agent` | Explores the topic from 3-6 distinct angles before decomposition, saved to `research/perspectives.md`; enabled by default, toggle with `enable_perspectives=False` |
 | `search-agent` | Web search via SearxNG (+ optional additional search tools), reformulates queries, saves results with their source |
 | `fetch-agent` | Downloads and extracts content from URLs: clean HTML with `trafilatura`, PDFs read with `pypdf`, User-Agent from real browsers |
 | `fact-check-agent` | Verifies claims against multiple independent sources (has both search and fetch) |

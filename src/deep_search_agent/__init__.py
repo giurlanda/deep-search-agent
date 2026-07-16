@@ -30,6 +30,7 @@ from deep_search_agent.prompts import (
     FACT_CHECK_AGENT_PROMPT,
     FETCH_AGENT_PROMPT,
     ORCHESTRATOR_PROMPT_TEMPLATE,
+    PERSPECTIVE_AGENT_PROMPT,
     SEARCH_AGENT_PROMPT_TEMPLATE,
 )
 from deep_search_agent.tools import (
@@ -43,6 +44,7 @@ __all__ = [
     "FACT_CHECK_AGENT_PROMPT",
     "FETCH_AGENT_PROMPT",
     "ORCHESTRATOR_PROMPT_TEMPLATE",
+    "PERSPECTIVE_AGENT_PROMPT",
     "SEARCH_AGENT_PROMPT_TEMPLATE",
     "CycleMetrics",
     "DefaultRubricMiddleware",
@@ -55,4 +57,4 @@ __all__ = [
     "create_searxng_search_tool",
 ]
 
-__version__ = "0.2.4"
+__version__ = "0.3.0"

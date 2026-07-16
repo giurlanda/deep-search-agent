@@ -3,6 +3,8 @@
 Each builder returns a :class:`deepagents.SubAgent` mapping (a ``TypedDict``)
 ready to be passed to ``create_deep_agent(subagents=...)``:
 
+- ``perspective-agent``: explores a topic from 3-6 distinct angles before
+  decomposition, so research does not collapse onto a single factual axis.
 - ``search-agent``: targeted web search that issues several query variants in
   parallel per sub-question, then deduplicates and keeps the best results.
 - ``fetch-agent``: full-content extraction from URLs (HTML and PDF).
@@ -22,6 +24,7 @@ from typing import TYPE_CHECKING
 from deep_search_agent.prompts import (
     FACT_CHECK_AGENT_PROMPT,
     FETCH_AGENT_PROMPT,
+    PERSPECTIVE_AGENT_PROMPT,
     SEARCH_AGENT_PROMPT_TEMPLATE,
 )
 
@@ -35,6 +38,7 @@ if TYPE_CHECKING:
 SEARCH_AGENT_NAME = "search-agent"
 FETCH_AGENT_NAME = "fetch-agent"
 FACT_CHECK_AGENT_NAME = "fact-check-agent"
+PERSPECTIVE_AGENT_NAME = "perspective-agent"
 
 
 def build_search_subagent(
@@ -143,6 +147,41 @@ def build_fact_check_subagent(
         ),
         "system_prompt": FACT_CHECK_AGENT_PROMPT,
         "tools": [*search_tools, fetch_tool],
+    }
+    if middleware:
+        agent["middleware"] = list(middleware)
+    return agent
+
+
+def build_perspective_subagent(
+    search_tools: Sequence[BaseTool],
+    *,
+    middleware: Sequence[AgentMiddleware] = (),
+) -> SubAgent:
+    """Build the perspective-planning sub-agent definition.
+
+    Args:
+        search_tools: Search tools used for the agent's exploratory searches
+            (the SearxNG tool plus any user-provided extra search tools).
+        middleware: Extra middleware to attach to this sub-agent (e.g.
+            logging, rate limiting), run before deepagents' default
+            sub-agent middleware stack.
+
+    Returns:
+        A ``SubAgent`` mapping for ``create_deep_agent(subagents=...)``.
+    """
+    agent: SubAgent = {
+        "name": PERSPECTIVE_AGENT_NAME,
+        "description": (
+            "Given the user's research topic, runs a couple of exploratory "
+            "searches and proposes 3-6 distinct perspectives (analysis axes, "
+            "stakeholder viewpoints, or dimensions of the problem), each with "
+            "2-4 targeted questions, saved to /research/perspectives.md. Use "
+            "before decomposing a broad or multi-faceted topic into "
+            "sub-questions."
+        ),
+        "system_prompt": PERSPECTIVE_AGENT_PROMPT,
+        "tools": list(search_tools),
     }
     if middleware:
         agent["middleware"] = list(middleware)

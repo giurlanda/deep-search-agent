@@ -6,8 +6,14 @@ evaluator loop** pattern on top of
 
 ## Flow
 
+0. (Optional, enabled by default) The orchestrator delegates to
+   **`perspective-agent`**, which explores the topic from 3-6 distinct angles
+   (analysis axes, stakeholder viewpoints, dimensions of the problem) and
+   writes them to `research/perspectives.md`. Disable with
+   `enable_perspectives=False`.
 1. The **orchestrator** (the main deep agent) receives the user query and
-   decomposes it into sub-questions with `write_todos`.
+   decomposes it into sub-questions with `write_todos` — one per
+   perspective/question pair when step 0 ran, otherwise a flat list.
 2. It **delegates** each sub-question to a specialized sub-agent, which runs in
    an **isolated context**.
 3. Sub-agents write sourced findings to the shared virtual filesystem as
@@ -29,7 +35,7 @@ orchestrator's context window; only the synthetic reports and the files in
 | Component | Where |
 |---|---|
 | Orchestrator wiring | [`factory.py`](https://github.com/giurlanda/deep-search-agent/blob/main/src/deep_search_agent/factory.py) — `create_deep_search_agent` |
-| Sub-agent builders | [`subagents.py`](https://github.com/giurlanda/deep-search-agent/blob/main/src/deep_search_agent/subagents.py) — `search-agent`, `fetch-agent`, `fact-check-agent` |
+| Sub-agent builders | [`subagents.py`](https://github.com/giurlanda/deep-search-agent/blob/main/src/deep_search_agent/subagents.py) — `perspective-agent`, `search-agent`, `fetch-agent`, `fact-check-agent` |
 | Rubric auto-injection | [`middleware.py`](https://github.com/giurlanda/deep-search-agent/blob/main/src/deep_search_agent/middleware.py) — `DefaultRubricMiddleware` |
 | Prompts & default rubric | [`prompts.py`](https://github.com/giurlanda/deep-search-agent/blob/main/src/deep_search_agent/prompts.py) |
 | Search tool | [`tools/search.py`](https://github.com/giurlanda/deep-search-agent/blob/main/src/deep_search_agent/tools/search.py) — SearxNG JSON API |
@@ -65,6 +71,7 @@ Two invariants worth knowing when you extend the library:
 - **Tools never raise.** The search and fetch tools return an `"ERROR: ..."`
   string on failure (network, timeout, non-2xx) instead of raising, so the
   agent can re-route or reformulate without crashing the run.
-- **Reserved sub-agent names.** `search-agent`, `fetch-agent`, and
-  `fact-check-agent` are reserved. Passing an extra sub-agent that reuses one of
-  these names raises `ValueError`.
+- **Reserved sub-agent names.** `search-agent`, `fetch-agent`,
+  `fact-check-agent`, and `perspective-agent` are reserved. Passing an extra
+  sub-agent that reuses one of these names raises `ValueError` — even when
+  `enable_perspectives=False`.
