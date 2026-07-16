@@ -167,6 +167,21 @@ def test_budgets_are_embedded_in_prompts(captured):
     assert "7 results" in search_agent["system_prompt"].replace("\n  ", " ")
 
 
+def test_query_variants_embedded_in_search_agent_prompt(captured):
+    create_deep_search_agent(model=make_fake_model(), max_query_variants=4)
+
+    search_prompt = captured["subagents"][0]["system_prompt"]
+    # The search agent is told how many parallel query variants to generate.
+    assert "generate 4 distinct query variants" in search_prompt.replace("\n", " ")
+
+
+def test_query_variants_default_embedded_in_search_agent_prompt(captured):
+    create_deep_search_agent(model=make_fake_model())
+
+    search_prompt = captured["subagents"][0]["system_prompt"]
+    assert "generate 3 distinct query variants" in search_prompt.replace("\n", " ")
+
+
 def test_refinement_instructions_in_orchestrator_prompt(captured):
     create_deep_search_agent(model=make_fake_model())
 
@@ -267,6 +282,8 @@ def test_explicit_backend_is_propagated(captured):
     [
         {"max_research_cycles": 0},
         {"max_research_cycles": -1},
+        {"max_query_variants": 0},
+        {"max_query_variants": -2},
         {"max_search_results_per_query": 0},
         {"max_urls_to_scrape_per_cycle": 0},
         {"searxng_budget": 0},

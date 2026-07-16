@@ -9,7 +9,7 @@ architecture on top of ``deepagents``:
   search tools), ``fetch-agent`` (trafilatura + pypdf), and
   ``fact-check-agent``; callers can add more via ``subagents``.
 - **Shared scratchpad** = deepagents' filesystem (pluggable ``backend``),
-  where every sub-agent writes ``findings/<source-slug>.md`` files with
+  where every sub-agent writes ``/findings/<source-slug>.md`` files with
   provenance.
 - **Evaluator/critic loop** = ``RubricMiddleware`` (deepagents beta), which
   grades the final answer against a rubric and re-runs the orchestrator up to
@@ -75,6 +75,7 @@ def create_deep_search_agent(
     *,
     model: str | BaseChatModel,
     max_research_cycles: int = 3,
+    max_query_variants: int = 3,
     max_search_results_per_query: int = 5,
     max_urls_to_scrape_per_cycle: int = 3,
     searxng_base_url: str = DEFAULT_SEARXNG_BASE_URL,
@@ -112,6 +113,11 @@ def create_deep_search_agent(
         max_research_cycles: Maximum refinement cycles of the evaluator
             loop (``RubricMiddleware.max_iterations``). Also quoted in the
             orchestrator's instructions as its iteration budget.
+        max_query_variants: Number of distinct query reformulations the
+            search agent issues in parallel per sub-question (synonyms,
+            broader/narrower terms, English variants, different angle) to
+            widen recall before deduplicating results. Quoted in the search
+            agent's instructions.
         max_search_results_per_query: Result budget per search query,
             enforced by the SearxNG tool and quoted in the search agent's
             instructions.
@@ -159,7 +165,7 @@ def create_deep_search_agent(
             internal knowledge base) added alongside the built-in
             ``search-agent``, ``fetch-agent``, and ``fact-check-agent``.
         backend: Filesystem backend shared by the orchestrator and every
-            sub-agent, so that ``findings/<source-slug>.md`` files written by
+            sub-agent, so that ``/findings/<source-slug>.md`` files written by
             a sub-agent flow back to the orchestrator on the same virtual
             filesystem. When omitted, a single :class:`~deepagents.backends.StateBackend`
             instance is created and shared; when provided, that exact instance
@@ -192,6 +198,7 @@ def create_deep_search_agent(
         )
         raise ValueError(msg)
     _validate_positive("max_research_cycles", max_research_cycles)
+    _validate_positive("max_query_variants", max_query_variants)
     _validate_positive("max_search_results_per_query", max_search_results_per_query)
     _validate_positive("max_urls_to_scrape_per_cycle", max_urls_to_scrape_per_cycle)
     if searxng_rate_limit is not None:
@@ -237,6 +244,7 @@ def create_deep_search_agent(
     built_in_subagents = [
         build_search_subagent(
             all_search_tools,
+            max_query_variants=max_query_variants,
             max_search_results_per_query=max_search_results_per_query,
             middleware=_subagent_middleware(SEARCH_AGENT_NAME),
         ),

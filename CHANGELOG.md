@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-07-16
+
+### Added
+
+- New `max_query_variants` factory parameter (default `3`, validated as a
+  positive integer). It is threaded into `SEARCH_AGENT_PROMPT_TEMPLATE` the
+  same way `max_search_results_per_query` is, and quoted in the search agent's
+  instructions.
+
+### Changed
+
+- `search-agent` now generates several query variants per sub-question on the
+  happy path — synonyms, broader/narrower terms, an English reformulation, or a
+  different angle — and issues them as parallel `internet_search` calls in the
+  same turn, then deduplicates by URL and keeps the best results across all
+  variants. Previously it ran a single query and only reformulated after an
+  outright failure, so recall depended on the orchestrator's first phrasing
+  ([#6]).
+
 ## [0.2.3] - 2026-07-16
 
 ### Changed
@@ -180,11 +199,13 @@ Initial release.
 [#2]: https://github.com/giurlanda/deep-search-agent/issues/2
 [#3]: https://github.com/giurlanda/deep-search-agent/issues/3
 [#4]: https://github.com/giurlanda/deep-search-agent/issues/4
+[#6]: https://github.com/giurlanda/deep-search-agent/issues/6
 [#9]: https://github.com/giurlanda/deep-search-agent/issues/9
 [#11]: https://github.com/giurlanda/deep-search-agent/issues/11
 [#13]: https://github.com/giurlanda/deep-search-agent/issues/13
 [#15]: https://github.com/giurlanda/deep-search-agent/issues/15
-[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.4...HEAD
+[0.2.4]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.0...v0.2.1

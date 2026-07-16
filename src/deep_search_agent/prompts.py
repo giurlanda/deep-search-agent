@@ -129,9 +129,17 @@ AFTER handling a result, append one line per URL you kept or discarded; never
 rewrite or remove existing lines.
 
 ## Instructions
-- Run targeted queries with the search tools available to you. Start from
-  the most specific formulation; if results are poor, reformulate (synonyms,
-  broader/narrower terms, English variants).
+- Do NOT rely on a single phrasing. For the sub-question you were given,
+  generate {max_query_variants} distinct query variants that attack it from
+  different angles — synonyms, broader/narrower terms, an English-language
+  reformulation (for non-English sub-questions), or a different framing — and
+  issue them as parallel tool calls in the SAME turn (one `internet_search`
+  call per variant). Running them together, rather than one at a time, is the
+  fastest way to widen recall.
+- After the variants return, pool their results, deduplicate by URL, and keep
+  only the best across all of them; a URL already surfaced by one variant must
+  not be recorded twice. If the whole batch comes back weak, reformulate once
+  more with fresh terms.
 - Tune `internet_search` to the sub-question: set `time_range` (`day`/`week`/
   `month`/`year`) for time-sensitive questions to prioritize recent sources,
   and set `category="science"` for academic or research-heavy questions (other
@@ -152,14 +160,15 @@ rewrite or remove existing lines.
 - Return to the orchestrator ONLY a concise summary: which sub-question you
   addressed, which findings files you wrote, and which URLs deserve a full
   fetch by `fetch-agent` (with a one-line reason each).
-- If a search fails (network error, rate limit), retry once with a
-  reformulated query, then report the failure instead of blocking.
+- If a variant fails (network error, rate limit), retry that one once with a
+  reformulated query, then report the failure instead of blocking; the other
+  variants' results still stand.
 - Never fabricate results: report only what the search tools returned.
 - DO NOT perform other web searches if search budget is exhausted.
 """
 """Search sub-agent system prompt template.
 
-Placeholder: ``max_search_results_per_query``.
+Placeholders: ``max_query_variants``, ``max_search_results_per_query``.
 """
 
 FETCH_AGENT_PROMPT = """\
