@@ -30,6 +30,11 @@ from langchain_core.tools import BaseTool, tool
 
 DEFAULT_SEARXNG_BASE_URL = "http://localhost:8888"
 
+# SearxNG accepts only these values for the ``time_range`` filter; anything else
+# is rejected by the instance, so the tool validates the argument up front and
+# returns an ``ERROR: ...`` string rather than issuing a doomed request.
+_VALID_TIME_RANGES = frozenset({"day", "week", "month", "year"})
+
 
 class SearchBudget:
     """Thread-safe cap on the number of search operations per research cycle.
@@ -191,17 +196,33 @@ def create_searxng_search_tool(
     )
 
     @tool
-    def internet_search(query: str) -> str:
+    def internet_search(
+        query: str,
+        category: str | None = None,
+        time_range: str | None = None,
+    ) -> str:
         """Search the web via SearxNG and return the top results.
 
         Args:
             query: The search query. Be specific; reformulate and call again
                 if the results are not relevant.
+            category: Optional SearxNG category to bias the search toward a kind
+                of source (e.g. ``"news"``, ``"science"``, ``"it"``). Use
+                ``"science"`` for academic/research questions. ``None`` uses the
+                instance's default general web search.
+            time_range: Optional recency filter; one of ``"day"``, ``"week"``,
+                ``"month"``, ``"year"``. Set it for time-sensitive questions to
+                prioritize recent sources. ``None`` applies no time filter.
 
         Returns:
             Markdown list of results (title, URL, snippet, date, engine),
             or an ``ERROR: ...`` message if the search failed.
         """
+        if time_range is not None and time_range not in _VALID_TIME_RANGES:
+            return (
+                f"ERROR: invalid time_range {time_range!r}. Use one of "
+                f"{', '.join(sorted(_VALID_TIME_RANGES))}, or omit it."
+            )
         # Budget gate first: cheap, and lets the model know immediately when
         # it has run out of searches without waiting on the rate limiter.
         if budget is not None and not budget.try_consume():
@@ -229,6 +250,10 @@ def create_searxng_search_tool(
         params: dict[str, str] = {"q": query, "format": "json"}
         if engines_param:
             params["engines"] = engines_param
+        if category:
+            params["categories"] = category
+        if time_range:
+            params["time_range"] = time_range
         try:
             response = httpx.get(search_url, params=params, timeout=timeout)
             response.raise_for_status()
