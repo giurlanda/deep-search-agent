@@ -175,6 +175,22 @@ def test_refinement_instructions_in_orchestrator_prompt(captured):
     assert "research/gaps.md" in prompt
 
 
+def test_shared_source_index_in_prompts(captured):
+    create_deep_search_agent(model=make_fake_model())
+
+    orchestrator = captured["system_prompt"]
+    search_agent = captured["subagents"][0]["system_prompt"]
+    fetch_agent = captured["subagents"][1]["system_prompt"]
+
+    # The `findings/_sources.md` ledger is referenced by the orchestrator and
+    # both sub-agents that write to it, so duplicate work can be avoided.
+    for prompt in (orchestrator, search_agent, fetch_agent):
+        assert "findings/_sources.md" in prompt
+
+    # Refinement cycles must steer sub-agents toward new domains/sources.
+    assert "diversify" in orchestrator
+
+
 def test_custom_system_prompt_wins(captured):
     create_deep_search_agent(model=make_fake_model(), system_prompt="my prompt")
 

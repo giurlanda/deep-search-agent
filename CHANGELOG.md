@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-07-16
+
+### Changed
+
+- The orchestrator, `search-agent`, and `fetch-agent` prompts now maintain and
+  consult a shared source index at `findings/_sources.md`: one line per URL
+  recording its status (`saved` / `failed` / `discarded`) and the associated
+  `findings/<source-slug>.md` file. Sub-agents check it before searching or
+  fetching and append their outcomes, and the orchestrator uses it to avoid
+  re-running queries or re-fetching pages — on refinement cycles it explicitly
+  instructs sub-agents to diversify domains relative to what is already indexed
+  ([#2]). Prompt-only change; no public API change.
+
 ## [0.2.0] - 2026-07-16
 
 ### Added
@@ -127,11 +140,13 @@ Initial release.
   Playwright end-to-end tests.
 
 [#1]: https://github.com/giurlanda/deep-search-agent/issues/1
+[#2]: https://github.com/giurlanda/deep-search-agent/issues/2
 [#9]: https://github.com/giurlanda/deep-search-agent/issues/9
 [#11]: https://github.com/giurlanda/deep-search-agent/issues/11
 [#13]: https://github.com/giurlanda/deep-search-agent/issues/13
 [#15]: https://github.com/giurlanda/deep-search-agent/issues/15
-[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/giurlanda/deep-search-agent/compare/v0.1.2...v0.1.3

@@ -16,6 +16,7 @@ The `create_deep_search_agent` factory returns a deep agent configured with the
 | `fetch-agent` | Downloads and extracts content from URLs: clean HTML with `trafilatura`, PDFs read with `pypdf`, User-Agent from real browsers |
 | `fact-check-agent` | Verifies claims against multiple independent sources (has both search and fetch) |
 | Shared memory | deepagents virtual filesystem: each sub-agent writes `findings/<source-slug>.md` with URL, date, and claims |
+| Shared source index | `findings/_sources.md`: one line per URL (`saved` / `failed` / `discarded`) that every agent consults and appends to, so searches and fetches are not duplicated across cycles |
 | Evaluator/critic | `RubricMiddleware` (beta): an LLM grader evaluates the answer against a rubric and re-runs the orchestrator up to `max_research_cycles` cycles |
 
 Each sub-agent runs with an isolated context: raw page content does not pollute
