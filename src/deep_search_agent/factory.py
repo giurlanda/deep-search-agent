@@ -12,17 +12,18 @@ architecture on top of ``deepagents``:
 - **Shared scratchpad** = deepagents' filesystem (pluggable ``backend``),
   where every sub-agent writes ``/findings/<source-slug>.md`` files with
   provenance.
-- **Evaluator/critic loop** = ``RubricMiddleware`` (deepagents beta), which
-  grades the final answer against a rubric and re-runs the orchestrator up to
-  ``max_research_cycles`` times; the default deep-search rubric is
-  auto-injected unless the caller provides one.
+- **Evaluator/critic loop** = ``DeepSearchRubricMiddleware`` (a thin subclass
+  of deepagents' beta ``RubricMiddleware`` that grades the final answer in
+  full), which grades the final answer against a rubric and re-runs the
+  orchestrator up to ``max_research_cycles`` times; the default deep-search
+  rubric is auto-injected unless the caller provides one.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from deepagents import RubricMiddleware, create_deep_agent
+from deepagents import create_deep_agent
 from deepagents.backends import StateBackend
 
 from deep_search_agent.metrics import (
@@ -30,6 +31,7 @@ from deep_search_agent.metrics import (
     _SubagentMetricsMiddleware,
 )
 from deep_search_agent.middleware import (
+    DeepSearchRubricMiddleware,
     DefaultRubricMiddleware,
     SearchBudgetResetMiddleware,
 )
@@ -315,8 +317,12 @@ def create_deep_search_agent(
         # Must precede RubricMiddleware so the rubric is in state when the
         # grading loop initializes.
         agent_middleware.append(DefaultRubricMiddleware(effective_rubric))
+    # DeepSearchRubricMiddleware (not the bare RubricMiddleware) so the grader
+    # sees the orchestrator's final report untruncated — otherwise long cited
+    # reports get cut at 4,000 chars and the grader flags a phantom
+    # "incomplete/truncated" gap (issue #22).
     agent_middleware.append(
-        RubricMiddleware(model=model, max_iterations=max_research_cycles)
+        DeepSearchRubricMiddleware(model=model, max_iterations=max_research_cycles)
     )
     # Reset the per-cycle search budget at each research-cycle boundary. Placed
     # after RubricMiddleware so it participates in the same before/after_agent

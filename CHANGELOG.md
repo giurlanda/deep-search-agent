@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-07-17
+
+### Fixed
+
+- The rubric grader no longer flags a phantom "incomplete/truncated" gap on
+  long final reports. `deepagents`' `RubricMiddleware` truncates every
+  transcript message it sends to the grader at 4,000 chars, which cut off the
+  tail of the orchestrator's synthesized answer (the "Gaps & limitations"
+  section and the numbered bibliography) and made the grader report a
+  completeness gap that did not exist. The factory now wires a new
+  `DeepSearchRubricMiddleware` — a thin subclass of `RubricMiddleware` that
+  passes the final answer to the grader untruncated while keeping earlier
+  transcript messages (e.g. large tool outputs) bounded ([#22]).
+
+### Added
+
+- `DeepSearchRubricMiddleware` is exported from the package `__all__`.
+
 ## [0.3.0] - 2026-07-16
 
 ### Added
@@ -234,7 +252,9 @@ Initial release.
 [#11]: https://github.com/giurlanda/deep-search-agent/issues/11
 [#13]: https://github.com/giurlanda/deep-search-agent/issues/13
 [#15]: https://github.com/giurlanda/deep-search-agent/issues/15
-[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.3.0...HEAD
+[#22]: https://github.com/giurlanda/deep-search-agent/issues/22
+[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/giurlanda/deep-search-agent/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.4...v0.3.0
 [0.2.4]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.2...v0.2.3
