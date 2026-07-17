@@ -5,9 +5,10 @@ architecture on top of ``deepagents``:
 
 - **Orchestrator** = the main deep agent, instructed to decompose the query,
   delegate to sub-agents, and synthesize a cited answer.
-- **Specialized sub-agents** = ``search-agent`` (SearxNG + optional extra
-  search tools), ``fetch-agent`` (trafilatura + pypdf), and
-  ``fact-check-agent``; callers can add more via ``subagents``.
+- **Specialized sub-agents** = ``perspective-agent`` (multi-angle topic
+  exploration before decomposition, enabled by default), ``search-agent``
+  (SearxNG + optional extra search tools), ``fetch-agent`` (trafilatura +
+  pypdf), and ``fact-check-agent``; callers can add more via ``subagents``.
 - **Shared scratchpad** = deepagents' filesystem (pluggable ``backend``),
   where every sub-agent writes ``/findings/<source-slug>.md`` files with
   provenance.
@@ -32,13 +33,20 @@ from deep_search_agent.middleware import (
     DefaultRubricMiddleware,
     SearchBudgetResetMiddleware,
 )
-from deep_search_agent.prompts import DEEP_SEARCH_RUBRIC, ORCHESTRATOR_PROMPT_TEMPLATE
+from deep_search_agent.prompts import (
+    DEEP_SEARCH_RUBRIC,
+    ORCHESTRATOR_PROMPT_TEMPLATE,
+    PERSPECTIVE_DECOMPOSE_HINT,
+    PERSPECTIVE_STEP_BLOCK,
+)
 from deep_search_agent.subagents import (
     FACT_CHECK_AGENT_NAME,
     FETCH_AGENT_NAME,
+    PERSPECTIVE_AGENT_NAME,
     SEARCH_AGENT_NAME,
     build_fact_check_subagent,
     build_fetch_subagent,
+    build_perspective_subagent,
     build_search_subagent,
 )
 from deep_search_agent.tools import create_fetch_url_tool, create_searxng_search_tool
@@ -85,6 +93,7 @@ def create_deep_search_agent(
     request_timeout: float = 15.0,
     max_content_chars_per_page: int = 20_000,
     search_tools: Sequence[BaseTool] | None = None,
+    enable_perspectives: bool = True,
     rubric: str | None = None,
     auto_rubric: bool = True,
     system_prompt: str | SystemMessage | None = None,
@@ -146,6 +155,14 @@ def create_deep_search_agent(
         search_tools: Extra search tools (e.g. a Tavily tool or an internal
             RAG retrieval tool) made available to ``search-agent`` and
             ``fact-check-agent`` alongside the built-in SearxNG tool.
+        enable_perspectives: When ``True`` (default), adds ``perspective-agent``
+            to the built-in sub-agents and instructs the orchestrator to
+            delegate to it before decomposing the query, so research explores
+            the topic from 3-6 distinct angles (analysis axes, stakeholder
+            viewpoints, dimensions of the problem) instead of a single flat
+            list of sub-questions. Set to ``False`` for simple queries where a
+            single-axis decomposition is sufficient, to skip the extra
+            delegation cycle and its token cost.
         rubric: Custom grading rubric (newline-delimited checklist).
             Defaults to :data:`~deep_search_agent.prompts.DEEP_SEARCH_RUBRIC`.
         auto_rubric: When ``True`` (default), the rubric is auto-injected
@@ -157,13 +174,14 @@ def create_deep_search_agent(
             with the cycle/URL budgets.
         middleware: Extra middleware appended after the rubric middleware.
         subagents_middleware: Extra middleware injected into each built-in
-            sub-agent (``search-agent``, ``fetch-agent``,
-            ``fact-check-agent``), e.g. for logging or rate limiting.
-            Sub-agents passed via ``subagents`` are caller-owned and left
-            untouched.
+            sub-agent (``perspective-agent`` when enabled, ``search-agent``,
+            ``fetch-agent``, ``fact-check-agent``), e.g. for logging or rate
+            limiting. Sub-agents passed via ``subagents`` are caller-owned and
+            left untouched.
         subagents: Extra sub-agents (e.g. a RAG retrieval agent over an
             internal knowledge base) added alongside the built-in
-            ``search-agent``, ``fetch-agent``, and ``fact-check-agent``.
+            ``search-agent``, ``fetch-agent``, ``fact-check-agent``, and
+            (when enabled) ``perspective-agent``.
         backend: Filesystem backend shared by the orchestrator and every
             sub-agent, so that ``/findings/<source-slug>.md`` files written by
             a sub-agent flow back to the orchestrator on the same virtual
@@ -241,23 +259,41 @@ def create_deep_search_agent(
             base.append(_SubagentMetricsMiddleware(metrics, name))
         return base
 
-    built_in_subagents = [
-        build_search_subagent(
-            all_search_tools,
-            max_query_variants=max_query_variants,
-            max_search_results_per_query=max_search_results_per_query,
-            middleware=_subagent_middleware(SEARCH_AGENT_NAME),
-        ),
-        build_fetch_subagent(
-            fetch_tool, middleware=_subagent_middleware(FETCH_AGENT_NAME)
-        ),
-        build_fact_check_subagent(
-            all_search_tools,
-            fetch_tool,
-            middleware=_subagent_middleware(FACT_CHECK_AGENT_NAME),
-        ),
-    ]
-    reserved_names = {agent["name"] for agent in built_in_subagents}
+    built_in_subagents = []
+    if enable_perspectives:
+        built_in_subagents.append(
+            build_perspective_subagent(
+                all_search_tools,
+                middleware=_subagent_middleware(PERSPECTIVE_AGENT_NAME),
+            )
+        )
+    built_in_subagents.extend(
+        [
+            build_search_subagent(
+                all_search_tools,
+                max_query_variants=max_query_variants,
+                max_search_results_per_query=max_search_results_per_query,
+                middleware=_subagent_middleware(SEARCH_AGENT_NAME),
+            ),
+            build_fetch_subagent(
+                fetch_tool, middleware=_subagent_middleware(FETCH_AGENT_NAME)
+            ),
+            build_fact_check_subagent(
+                all_search_tools,
+                fetch_tool,
+                middleware=_subagent_middleware(FACT_CHECK_AGENT_NAME),
+            ),
+        ]
+    )
+    # perspective-agent is always reserved, even when enable_perspectives is
+    # False, so a caller-supplied sub-agent can never collide with it and
+    # toggling the flag never changes name-collision behavior.
+    reserved_names = {
+        SEARCH_AGENT_NAME,
+        FETCH_AGENT_NAME,
+        FACT_CHECK_AGENT_NAME,
+        PERSPECTIVE_AGENT_NAME,
+    }
     extra_subagents = list(subagents or [])
     for agent in extra_subagents:
         name = (
@@ -294,6 +330,10 @@ def create_deep_search_agent(
         system_prompt = ORCHESTRATOR_PROMPT_TEMPLATE.format(
             max_research_cycles=max_research_cycles,
             max_urls_to_scrape_per_cycle=max_urls_to_scrape_per_cycle,
+            perspective_step=PERSPECTIVE_STEP_BLOCK if enable_perspectives else "",
+            perspective_decompose_hint=(
+                PERSPECTIVE_DECOMPOSE_HINT if enable_perspectives else ""
+            ),
         )
 
     return create_deep_agent(

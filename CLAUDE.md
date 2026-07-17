@@ -29,7 +29,7 @@ Pattern **orchestratore + sub-agenti specializzati + loop evaluator**. Punti d'i
 - [tools/fetch.py](src/deep_search_agent/tools/fetch.py) — tool fetch URL: HTML con `trafilatura`, PDF con `pypdf`.
 
 Flusso: l'orchestratore scompone la query con `write_todos`, delega ai sub-agenti (contesto isolato),
-i sub-agenti scrivono `findings/<source-slug>.md` sul filesystem virtuale di deepagents, poi
+i sub-agenti scrivono `/findings/<source-slug>.md` sul filesystem virtuale di deepagents, poi
 l'orchestratore sintetizza con citazioni. `RubricMiddleware` (beta di deepagents) fa da evaluator/critic:
 valuta la risposta contro la rubric e rilancia l'orchestratore fino a `max_research_cycles`.
 

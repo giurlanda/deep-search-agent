@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-16
+
+### Added
+
+- New `perspective-agent` sub-agent (`build_perspective_subagent` in
+  `subagents.py`), modeled on STORM-style perspective-guided question asking:
+  given the research topic, it runs 1-2 exploratory searches and writes 3-6
+  distinct perspectives (analysis axes, stakeholder viewpoints, dimensions of
+  the problem), each with 2-4 targeted questions, to
+  `/research/perspectives.md`.
+- New `enable_perspectives` factory parameter (default `True`). When enabled,
+  the orchestrator prompt gets a new step 0 that delegates to
+  `perspective-agent` before decomposition and builds todos as
+  perspective → questions pairs instead of a flat sub-question list. Set to
+  `False` to skip the extra delegation cycle for simple, single-axis queries.
+- New `PERSPECTIVE_AGENT_PROMPT` prompt template, exported from the package
+  `__all__` alongside the other sub-agent prompts.
+- `"perspective-agent"` is now a reserved sub-agent name (alongside
+  `search-agent`, `fetch-agent`, `fact-check-agent`): a caller-supplied
+  sub-agent with that name raises `ValueError`, even when
+  `enable_perspectives=False` ([#5]).
+
+### Changed
+
+- **Behavior change on the default path**: `enable_perspectives=True` by
+  default adds one extra delegation cycle (and its token cost) to every run,
+  without changing any function signature. Pass `enable_perspectives=False`
+  to restore the previous single-axis decomposition behavior.
+
 ## [0.2.4] - 2026-07-16
 
 ### Added
@@ -199,12 +228,14 @@ Initial release.
 [#2]: https://github.com/giurlanda/deep-search-agent/issues/2
 [#3]: https://github.com/giurlanda/deep-search-agent/issues/3
 [#4]: https://github.com/giurlanda/deep-search-agent/issues/4
+[#5]: https://github.com/giurlanda/deep-search-agent/issues/5
 [#6]: https://github.com/giurlanda/deep-search-agent/issues/6
 [#9]: https://github.com/giurlanda/deep-search-agent/issues/9
 [#11]: https://github.com/giurlanda/deep-search-agent/issues/11
 [#13]: https://github.com/giurlanda/deep-search-agent/issues/13
 [#15]: https://github.com/giurlanda/deep-search-agent/issues/15
-[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.4...v0.3.0
 [0.2.4]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.1...v0.2.2

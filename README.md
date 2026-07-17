@@ -18,11 +18,12 @@ The `create_deep_search_agent` factory returns a deep agent configured with the
 | Component | Implementation |
 |---|---|
 | Orchestrator | Main agent (`create_deep_agent`): decomposes the query with `write_todos`, delegates, synthesizes with citations |
+| `perspective-agent` | Explores the topic from 3-6 distinct angles (analysis axes, stakeholder viewpoints, dimensions of the problem) before decomposition, saved to `/research/perspectives.md`; enabled by default, toggle with `enable_perspectives=False` |
 | `search-agent` | Web search via SearxNG (+ optional additional search tools), reformulates queries, saves results with their source |
 | `fetch-agent` | Downloads and extracts content from URLs: clean HTML with `trafilatura`, PDFs read with `pypdf`, User-Agent from real browsers |
 | `fact-check-agent` | Verifies claims against multiple independent sources (has both search and fetch) |
-| Shared memory | deepagents virtual filesystem: each sub-agent writes `findings/<source-slug>.md` with URL, date, and claims |
-| Shared source index | `findings/_sources.md`: one line per URL (`saved` / `failed` / `discarded`) that every agent consults and appends to, so searches and fetches are not duplicated across cycles |
+| Shared memory | deepagents virtual filesystem: each sub-agent writes `/findings/<source-slug>.md` with URL, date, and claims |
+| Shared source index | `/findings/_sources.md`: one line per URL (`saved` / `failed` / `discarded`) that every agent consults and appends to, so searches and fetches are not duplicated across cycles |
 | Evaluator/critic | `RubricMiddleware` (beta): an LLM grader evaluates the answer against a rubric and re-runs the orchestrator up to `max_research_cycles` cycles |
 
 Each sub-agent runs with an isolated context: raw page content does not pollute
@@ -81,10 +82,11 @@ Deep-search-specific parameters:
 | `searxng_budget` | `None` | Maximum SearxNG searches per research cycle; when exhausted the tool returns an `ERROR:` telling the model no budget is left. `None` means unlimited |
 | `request_timeout` | `15.0` | HTTP timeout (s) for search and fetch |
 | `max_content_chars_per_page` | `20000` | Truncation of extracted content per page |
-| `search_tools` | `None` | Additional search tools for search-agent and fact-check-agent (e.g. Tavily, RAG retrieval) |
+| `search_tools` | `None` | Additional search tools for search-agent, fact-check-agent, and perspective-agent (e.g. Tavily, RAG retrieval) |
+| `enable_perspectives` | `True` | Adds `perspective-agent` and instructs the orchestrator to delegate to it before decomposing the query. Set `False` for simple queries where a single-axis decomposition is sufficient |
 | `rubric` | `DEEP_SEARCH_RUBRIC` | Custom evaluation rubric |
 | `auto_rubric` | `True` | Auto-inject the rubric into the state on every invoke |
-| `subagents_middleware` | `()` | Extra middleware injected into each built-in sub-agent (search-agent, fetch-agent, fact-check-agent) |
+| `subagents_middleware` | `()` | Extra middleware injected into each built-in sub-agent (perspective-agent, search-agent, fetch-agent, fact-check-agent) |
 | `subagents` | `None` | Extra sub-agents, added to the built-in ones |
 | `backend` | `StateBackend()` | Filesystem backend shared by the orchestrator and every sub-agent |
 
@@ -146,7 +148,7 @@ src/deep_search_agent/
 ├── factory.py       # create_deep_search_agent
 ├── prompts.py       # orchestrator/sub-agent prompts + default rubric
 ├── middleware.py    # DefaultRubricMiddleware (rubric auto-injection)
-├── subagents.py     # search/fetch/fact-check agent definitions
+├── subagents.py     # perspective/search/fetch/fact-check agent definitions
 └── tools/
     ├── search.py    # SearxNG tool
     └── fetch.py     # URL fetch tool (trafilatura + pypdf)

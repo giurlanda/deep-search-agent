@@ -15,6 +15,7 @@ from deep_search_agent.factory import create_deep_search_agent
 from deep_search_agent.subagents import (
     FACT_CHECK_AGENT_NAME,
     FETCH_AGENT_NAME,
+    PERSPECTIVE_AGENT_NAME,
     SEARCH_AGENT_NAME,
 )
 
@@ -47,8 +48,20 @@ def captured(monkeypatch):
     return calls
 
 
-def test_builds_three_builtin_subagents(captured):
+def test_builds_four_builtin_subagents_by_default(captured):
     create_deep_search_agent(model=make_fake_model())
+
+    names = [agent["name"] for agent in captured["subagents"]]
+    assert names == [
+        PERSPECTIVE_AGENT_NAME,
+        SEARCH_AGENT_NAME,
+        FETCH_AGENT_NAME,
+        FACT_CHECK_AGENT_NAME,
+    ]
+
+
+def test_enable_perspectives_false_omits_perspective_agent(captured):
+    create_deep_search_agent(model=make_fake_model(), enable_perspectives=False)
 
     names = [agent["name"] for agent in captured["subagents"]]
     assert names == [SEARCH_AGENT_NAME, FETCH_AGENT_NAME, FACT_CHECK_AGENT_NAME]
@@ -65,7 +78,7 @@ def test_user_subagents_are_appended(captured):
 
     names = [agent["name"] for agent in captured["subagents"]]
     assert names[-1] == "rag-agent"
-    assert len(names) == 4
+    assert len(names) == 5
 
 
 def test_reserved_subagent_name_raises():
@@ -73,6 +86,15 @@ def test_reserved_subagent_name_raises():
 
     with pytest.raises(ValueError, match="reserved"):
         create_deep_search_agent(model=make_fake_model(), subagents=[clash])
+
+
+def test_perspective_agent_name_reserved_even_when_disabled():
+    clash = {"name": PERSPECTIVE_AGENT_NAME, "description": "x", "system_prompt": "y"}
+
+    with pytest.raises(ValueError, match="reserved"):
+        create_deep_search_agent(
+            model=make_fake_model(), enable_perspectives=False, subagents=[clash]
+        )
 
 
 def test_rubric_middleware_configured_with_cycles(captured):
@@ -163,14 +185,18 @@ def test_budgets_are_embedded_in_prompts(captured):
     assert "2 URLs per research cycle" in captured["system_prompt"].replace(
         "\n   ", " "
     )
-    search_agent = captured["subagents"][0]
+    search_agent = next(
+        a for a in captured["subagents"] if a["name"] == SEARCH_AGENT_NAME
+    )
     assert "7 results" in search_agent["system_prompt"].replace("\n  ", " ")
 
 
 def test_query_variants_embedded_in_search_agent_prompt(captured):
     create_deep_search_agent(model=make_fake_model(), max_query_variants=4)
 
-    search_prompt = captured["subagents"][0]["system_prompt"]
+    search_prompt = next(
+        a for a in captured["subagents"] if a["name"] == SEARCH_AGENT_NAME
+    )["system_prompt"]
     # The search agent is told how many parallel query variants to generate.
     assert "generate 4 distinct query variants" in search_prompt.replace("\n", " ")
 
@@ -178,7 +204,9 @@ def test_query_variants_embedded_in_search_agent_prompt(captured):
 def test_query_variants_default_embedded_in_search_agent_prompt(captured):
     create_deep_search_agent(model=make_fake_model())
 
-    search_prompt = captured["subagents"][0]["system_prompt"]
+    search_prompt = next(
+        a for a in captured["subagents"] if a["name"] == SEARCH_AGENT_NAME
+    )["system_prompt"]
     assert "generate 3 distinct query variants" in search_prompt.replace("\n", " ")
 
 
@@ -204,6 +232,25 @@ def test_outline_first_synthesis_in_orchestrator_prompt(captured):
     assert "Gaps & limitations" in prompt
 
 
+def test_perspective_step_in_orchestrator_prompt_by_default(captured):
+    create_deep_search_agent(model=make_fake_model())
+
+    prompt = captured["system_prompt"]
+    assert "EXPLORE PERSPECTIVES" in prompt
+    assert "perspective-agent" in prompt
+    assert "research/perspectives.md" in prompt
+    assert "perspective/question pair" in prompt
+
+
+def test_perspective_step_omitted_when_disabled(captured):
+    create_deep_search_agent(model=make_fake_model(), enable_perspectives=False)
+
+    prompt = captured["system_prompt"]
+    assert "EXPLORE PERSPECTIVES" not in prompt
+    assert "perspective-agent" not in prompt
+    assert "research/perspectives.md" not in prompt
+
+
 def test_rubric_grades_report_structure():
     # The default rubric must grade structure/organization, not only
     # completeness and traceability.
@@ -217,8 +264,12 @@ def test_shared_source_index_in_prompts(captured):
     create_deep_search_agent(model=make_fake_model())
 
     orchestrator = captured["system_prompt"]
-    search_agent = captured["subagents"][0]["system_prompt"]
-    fetch_agent = captured["subagents"][1]["system_prompt"]
+    search_agent = next(
+        a for a in captured["subagents"] if a["name"] == SEARCH_AGENT_NAME
+    )["system_prompt"]
+    fetch_agent = next(
+        a for a in captured["subagents"] if a["name"] == FETCH_AGENT_NAME
+    )["system_prompt"]
 
     # The `findings/_sources.md` ledger is referenced by the orchestrator and
     # both sub-agents that write to it, so duplicate work can be avoided.
@@ -245,12 +296,32 @@ def test_extra_search_tools_reach_search_and_fact_check_agents(captured):
 
     create_deep_search_agent(model=make_fake_model(), search_tools=[my_kb_search])
 
-    search_agent = captured["subagents"][0]
-    fact_check_agent = captured["subagents"][2]
+    search_agent = next(
+        a for a in captured["subagents"] if a["name"] == SEARCH_AGENT_NAME
+    )
+    fact_check_agent = next(
+        a for a in captured["subagents"] if a["name"] == FACT_CHECK_AGENT_NAME
+    )
     assert my_kb_search in search_agent["tools"]
     assert my_kb_search in fact_check_agent["tools"]
     # SearxNG tool is always first
     assert search_agent["tools"][0].name == "internet_search"
+
+
+def test_extra_search_tools_reach_perspective_agent(captured):
+    from langchain_core.tools import tool
+
+    @tool
+    def my_kb_search(query: str) -> str:
+        """Search the internal knowledge base."""
+        return "kb result"
+
+    create_deep_search_agent(model=make_fake_model(), search_tools=[my_kb_search])
+
+    perspective_agent = next(
+        a for a in captured["subagents"] if a["name"] == PERSPECTIVE_AGENT_NAME
+    )
+    assert my_kb_search in perspective_agent["tools"]
 
 
 def test_kwargs_passed_through_to_create_deep_agent(captured):
