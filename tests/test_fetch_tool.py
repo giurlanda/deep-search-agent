@@ -52,18 +52,72 @@ def test_sends_browser_user_agent(fake_httpx_get):
     assert kwargs["follow_redirects"] is True
 
 
-def test_truncates_long_content(fake_httpx_get):
-    long_paragraph = "word " * 5000
-    page = f"<html><body><article><p>{long_paragraph}</p></article></body></html>"
+def test_truncates_long_content_keeping_head_and_tail(fake_httpx_get):
+    paragraphs = "".join(f"<p>OPENING {'word ' * 20}</p>" for _ in range(15)) + "".join(
+        f"<p>CLOSING {'word ' * 20}</p>" for _ in range(15)
+    )
+    page = f"<html><body><article>{paragraphs}</article></body></html>"
     fake_httpx_get.response = FakeResponse(
         text=page, headers={"content-type": "text/html"}
     )
-    tool = create_fetch_url_tool(max_content_chars=100)
+    tool = create_fetch_url_tool(max_content_chars=2_000)
 
     output = tool.invoke({"url": "https://example.org/long"})
 
-    assert output.endswith("...(content truncated)")
-    assert len(output) < 200
+    assert fetch_module.TRUNCATION_MARKER in output
+    assert output.startswith("OPENING")
+    # The tail of the document survives — that is the point of the head+tail split.
+    assert output.rstrip().endswith("word")
+    assert "CLOSING" in output
+    assert len(output) <= 2_000 + len(fetch_module.TRUNCATION_MARKER)
+
+
+def test_short_content_is_not_truncated(fake_httpx_get):
+    fake_httpx_get.response = FakeResponse(
+        text=HTML_PAGE, headers={"content-type": "text/html"}
+    )
+    tool = create_fetch_url_tool(max_content_chars=20_000)
+
+    output = tool.invoke({"url": "https://example.org/article"})
+
+    assert fetch_module.TRUNCATION_MARKER not in output
+
+
+def test_truncate_head_tail_snaps_to_paragraph_boundaries():
+    # With max_chars=100 the head budget is 60 and the tail budget 40; both
+    # paragraph breaks below sit in the outer half of their slice, so both
+    # sides snap to them instead of cutting mid-paragraph.
+    head = "A" * 40
+    tail = "B" * 30
+    text = "\n\n".join([head, "M" * 200, tail])
+
+    output = fetch_module._truncate_head_tail(text, 100)
+
+    part_head, part_tail = output.split(fetch_module.TRUNCATION_MARKER)
+    assert part_head == head
+    assert part_tail == tail
+
+
+def test_truncate_head_tail_snaps_on_single_newlines():
+    # trafilatura joins paragraphs with a single "\n", so that separator must
+    # work as a cut point too.
+    text = "\n".join(["A" * 40, "M" * 200, "B" * 30])
+
+    output = fetch_module._truncate_head_tail(text, 100)
+
+    part_head, part_tail = output.split(fetch_module.TRUNCATION_MARKER)
+    assert part_head == "A" * 40
+    assert part_tail == "B" * 30
+
+
+def test_truncate_head_tail_without_paragraphs_falls_back_to_hard_cut():
+    text = "x" * 500
+
+    output = fetch_module._truncate_head_tail(text, 100)
+
+    part_head, part_tail = output.split(fetch_module.TRUNCATION_MARKER)
+    assert len(part_head) == 60
+    assert len(part_tail) == 40
 
 
 def test_pdf_content_type_routes_to_pdf_extraction(fake_httpx_get, monkeypatch):
