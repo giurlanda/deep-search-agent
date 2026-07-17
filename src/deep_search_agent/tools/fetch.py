@@ -8,6 +8,9 @@ content:
 - PDF documents (detected via ``Content-Type`` or a ``.pdf`` extension) are
   read with ``pypdf``.
 
+Content longer than the budget is truncated head+tail rather than head-only,
+so that conclusions and references at the end of a document survive.
+
 Failures are returned as ``ERROR: ...`` strings instead of raising, so the
 calling agent can reroute to a different source without crashing the flow.
 """
@@ -71,6 +74,58 @@ def _is_pdf(url: str, content_type: str) -> bool:
     )
 
 
+# Share of the character budget kept from the start of the document; the rest
+# is kept from the end, where conclusions and references usually live.
+HEAD_RATIO: float = 0.6
+
+TRUNCATION_MARKER: str = "\n\n...(middle section omitted for length)...\n\n"
+
+# Candidate cut points, strongest first. trafilatura joins paragraphs with a
+# single newline, so "\n" must be a fallback or HTML content would never snap.
+_BOUNDARIES: tuple[str, ...] = ("\n\n", "\n", ". ")
+
+
+def _truncate_head_tail(text: str, max_chars: int) -> str:
+    """Shrink ``text`` to ``max_chars`` keeping both its head and its tail.
+
+    The head takes :data:`HEAD_RATIO` of the budget and the tail the remainder,
+    joined by :data:`TRUNCATION_MARKER`. Each side snaps to the strongest
+    paragraph/sentence boundary falling in the outer half of its slice, so
+    neither end reads as a cut-off fragment; when no boundary qualifies the
+    slice is cut at the exact budget.
+
+    Args:
+        text: The extracted document text.
+        max_chars: Maximum number of content characters to keep (the marker is
+            added on top of this budget).
+
+    Returns:
+        ``text`` unchanged when it already fits, otherwise the head+tail
+        excerpt with the omission marker between the two parts.
+    """
+    if len(text) <= max_chars:
+        return text
+
+    head_budget = max(1, int(max_chars * HEAD_RATIO))
+    tail_budget = max(1, max_chars - head_budget)
+
+    head = text[:head_budget]
+    for separator in _BOUNDARIES:
+        boundary = head.rfind(separator)
+        if boundary > head_budget // 2:
+            head = head[:boundary]
+            break
+
+    tail = text[-tail_budget:]
+    for separator in _BOUNDARIES:
+        boundary = tail.find(separator)
+        if boundary != -1 and boundary < tail_budget // 2:
+            tail = tail[boundary + len(separator) :]
+            break
+
+    return head.rstrip() + TRUNCATION_MARKER + tail.lstrip()
+
+
 def create_fetch_url_tool(
     *,
     timeout: float = 20.0,
@@ -80,8 +135,9 @@ def create_fetch_url_tool(
 
     Args:
         timeout: Per-request timeout in seconds.
-        max_content_chars: Maximum number of characters returned; longer
-            content is truncated with an explicit marker.
+        max_content_chars: Maximum number of content characters returned;
+            longer content keeps its head and its tail, joined by an explicit
+            marker signalling the omitted middle section.
 
     Returns:
         A LangChain tool named ``fetch_url`` that takes a ``url`` string and
@@ -98,7 +154,8 @@ def create_fetch_url_tool(
                 documents are supported.
 
         Returns:
-            The extracted text content (truncated if very long), or an
+            The extracted text content (for very long documents, the opening
+            and closing sections with the middle omitted), or an
             ``ERROR: ...`` message if the download/extraction failed.
         """
         try:
@@ -144,8 +201,6 @@ def create_fetch_url_tool(
                     "(possibly a JavaScript-only page or a bot wall)."
                 )
 
-        if len(text) > max_content_chars:
-            text = text[:max_content_chars] + "\n\n...(content truncated)"
-        return text
+        return _truncate_head_tail(text, max_content_chars)
 
     return fetch_url

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-07-17
+
+### Changed
+
+- `fetch_url` now truncates long documents head+tail instead of keeping only
+  the opening. Previously the first `max_content_chars` were kept and the rest
+  discarded, which threw away exactly the sections that carry conclusions,
+  references and the most recent updates. The tool now keeps 60% of the budget
+  from the start and 40% from the end, joined by an explicit marker signalling
+  the omitted middle section. Both cuts snap to the nearest paragraph or
+  sentence boundary in the outer half of their slice, falling back to a hard
+  cut when no boundary qualifies, so neither end reads as a fragment ([#25]).
+
+  The truncation marker changed from a trailing `...(content truncated)` to a
+  mid-document `...(middle section omitted for length)...`. Code matching on
+  the old marker string needs updating.
+
 ## [0.3.1] - 2026-07-17
 
 ### Fixed
@@ -257,7 +274,9 @@ Initial release.
 [#13]: https://github.com/giurlanda/deep-search-agent/issues/13
 [#15]: https://github.com/giurlanda/deep-search-agent/issues/15
 [#22]: https://github.com/giurlanda/deep-search-agent/issues/22
-[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.3.1...HEAD
+[#25]: https://github.com/giurlanda/deep-search-agent/issues/25
+[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/giurlanda/deep-search-agent/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/giurlanda/deep-search-agent/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.4...v0.3.0
 [0.2.4]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.3...v0.2.4

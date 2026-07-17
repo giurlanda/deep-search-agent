@@ -69,7 +69,7 @@ valuta la risposta contro la rubric e rilancia l'orchestratore fino a `max_resea
 Per modifiche tracciate (fix/feature/refactor) usa la skill **project-change-workflow** (issue → branch →
 implementazione → test/doc → bump versione + CHANGELOG → commit → PR). Per pubblicare usa **release-pylib**.
 La versione è dinamica (`hatchling`): vive in [\_\_init\_\_.py](src/deep_search_agent/__init__.py)
-(`__version__`, attualmente 0.1.0) ed è letta via `[tool.hatch.version]` in pyproject.toml.
+(`__version__`) ed è letta via `[tool.hatch.version]` in pyproject.toml.
 
 ## Knowledge Graph & Navigation
 
