@@ -57,6 +57,12 @@ dev = [
 ]
 
 [project.optional-dependencies]
+# Extra for the opt-in headless-rendering fallback of the fetch tool
+# (create_deep_search_agent(enable_js_render_fallback=True)). Browsers are not
+# bundled: after installing, run `playwright install chromium`.
+js-render = [
+    "playwright>=1.49",
+]
 docs = [
     "mkdocs>=1.6",
     "mkdocs-material>=9.5",

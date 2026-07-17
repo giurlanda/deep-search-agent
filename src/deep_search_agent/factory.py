@@ -95,6 +95,8 @@ def create_deep_search_agent(
     searxng_budget: int | None = None,
     request_timeout: float = 15.0,
     max_content_chars_per_page: int = 20_000,
+    enable_js_render_fallback: bool = False,
+    js_render_timeout: float = 30.0,
     search_tools: Sequence[BaseTool] | None = None,
     enable_perspectives: bool = True,
     rubric: str | None = None,
@@ -156,6 +158,19 @@ def create_deep_search_agent(
             fetch tools.
         max_content_chars_per_page: Truncation limit for content extracted
             by the fetch tool.
+        enable_js_render_fallback: When ``True``, a page whose static HTML
+            yields no extractable content is re-fetched by the fetch tool
+            through a headless Chromium (Playwright) and extracted again,
+            recovering JavaScript-only pages and bot walls that would otherwise
+            be lost as sources. Requires the ``js-render`` extra plus installed
+            Playwright browsers (``pip install deep-search-agent[js-render]``
+            and ``playwright install chromium``); when either is missing the
+            fetch tool returns an ``ERROR: ...`` string rather than raising.
+            ``False`` (default) keeps the library browser-free.
+        js_render_timeout: Seconds the headless renderer waits for a page to
+            settle. Distinct from ``request_timeout`` because rendering is much
+            slower than a plain HTTP request. Ignored unless
+            ``enable_js_render_fallback`` is ``True``.
         search_tools: Extra search tools (e.g. a Tavily tool or an internal
             RAG retrieval tool) made available to ``search-agent`` and
             ``fact-check-agent`` alongside the built-in SearxNG tool.
@@ -216,7 +231,8 @@ def create_deep_search_agent(
 
     Raises:
         ValueError: If ``model`` is missing, an integer budget parameter is
-            not a positive integer, ``searxng_rate_limit`` is not a positive
+            not a positive integer, ``searxng_rate_limit`` or (when the
+            fallback is enabled) ``js_render_timeout`` is not a positive
             number, or a reserved sub-agent name is reused.
     """
     if model is None:
@@ -232,6 +248,8 @@ def create_deep_search_agent(
     _validate_positive("max_urls_to_scrape_per_cycle", max_urls_to_scrape_per_cycle)
     if searxng_rate_limit is not None:
         _validate_positive_number("searxng_rate_limit", searxng_rate_limit)
+    if enable_js_render_fallback:
+        _validate_positive_number("js_render_timeout", js_render_timeout)
     if searxng_budget is not None:
         _validate_positive("searxng_budget", searxng_budget)
 
@@ -258,6 +276,8 @@ def create_deep_search_agent(
     fetch_tool = create_fetch_url_tool(
         timeout=request_timeout,
         max_content_chars=max_content_chars_per_page,
+        enable_js_render_fallback=enable_js_render_fallback,
+        js_render_timeout=js_render_timeout,
     )
 
     # --- Sub-agents --------------------------------------------------------

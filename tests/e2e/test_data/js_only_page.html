@@ -1,0 +1,19 @@
+<html>
+  <head><title>Deep Search Agent — JS-only Page</title></head>
+  <body>
+    <!-- The article exists only after the script runs: fetching this page
+         statically yields an empty shell, exactly like a real SPA. -->
+    <div id="root"></div>
+    <script>
+      document.getElementById("root").innerHTML = `
+        <article>
+          <h1>Client-rendered article</h1>
+          <p>This paragraph is injected by JavaScript once the page loads, so
+          it is absent from the HTML served over the wire. Any extractor
+          working on the static response sees an empty document.</p>
+          <p>A headless browser runs the script first, so the rendered DOM
+          contains the full text and the extraction succeeds.</p>
+        </article>`;
+    </script>
+  </body>
+</html>

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-17
+
+### Added
+
+- Opt-in headless-rendering fallback for `fetch_url`. When static extraction
+  finds no main content — the usual outcome for JavaScript-only pages and bot
+  walls, which previously cost the agent otherwise valid sources — the page is
+  re-fetched through a headless Chromium and extracted again. Enable it with
+  `create_deep_search_agent(enable_js_render_fallback=True)`; `js_render_timeout`
+  (default `30.0` s) bounds the wait for a page to settle ([#23]).
+
+  The fallback is off by default and needs the new `js-render` extra plus the
+  browser binary (`pip install deep-search-agent[js-render]` and
+  `playwright install chromium`). When either is missing, or rendering fails,
+  the tool returns an `ERROR: ...` string as usual instead of raising, so the
+  agent reroutes to another source. Rendering runs on a dedicated worker
+  thread, keeping Playwright's sync API off any live asyncio loop.
+
 ## [0.3.2] - 2026-07-17
 
 ### Changed
@@ -274,8 +292,10 @@ Initial release.
 [#13]: https://github.com/giurlanda/deep-search-agent/issues/13
 [#15]: https://github.com/giurlanda/deep-search-agent/issues/15
 [#22]: https://github.com/giurlanda/deep-search-agent/issues/22
+[#23]: https://github.com/giurlanda/deep-search-agent/issues/23
 [#25]: https://github.com/giurlanda/deep-search-agent/issues/25
-[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/giurlanda/deep-search-agent/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/giurlanda/deep-search-agent/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/giurlanda/deep-search-agent/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/giurlanda/deep-search-agent/compare/v0.2.4...v0.3.0

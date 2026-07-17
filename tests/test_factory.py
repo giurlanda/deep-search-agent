@@ -395,6 +395,56 @@ def test_invalid_searxng_rate_limit_raises(rate_limit):
         create_deep_search_agent(model=make_fake_model(), searxng_rate_limit=rate_limit)
 
 
+@pytest.mark.parametrize("timeout", [0, -5.0])
+def test_invalid_js_render_timeout_raises(timeout):
+    with pytest.raises(ValueError, match="positive number"):
+        create_deep_search_agent(
+            model=make_fake_model(),
+            enable_js_render_fallback=True,
+            js_render_timeout=timeout,
+        )
+
+
+def test_js_render_timeout_unvalidated_while_fallback_is_off(captured):
+    # The value is never read when the fallback is off, so it must not gate
+    # agent creation for callers that leave the default path alone.
+    create_deep_search_agent(model=make_fake_model(), js_render_timeout=0)
+
+    assert captured["subagents"]
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "expected"),
+    [
+        ({}, (False, 30.0)),
+        ({"enable_js_render_fallback": True, "js_render_timeout": 45.0}, (True, 45.0)),
+    ],
+)
+def test_js_render_settings_reach_the_fetch_tool(
+    monkeypatch, captured, kwargs, expected
+):
+    from langchain_core.tools import tool
+
+    @tool
+    def stub_fetch(url: str) -> str:
+        """Stand-in for the real fetch tool."""
+        return "content"
+
+    seen: dict = {}
+
+    def fake_create_fetch_url_tool(**tool_kwargs):
+        seen.update(tool_kwargs)
+        return stub_fetch
+
+    monkeypatch.setattr(
+        factory_module, "create_fetch_url_tool", fake_create_fetch_url_tool
+    )
+
+    create_deep_search_agent(model=make_fake_model(), **kwargs)
+
+    assert (seen["enable_js_render_fallback"], seen["js_render_timeout"]) == expected
+
+
 def test_searxng_budget_adds_reset_middleware(captured):
     from deep_search_agent import SearchBudgetResetMiddleware
 
