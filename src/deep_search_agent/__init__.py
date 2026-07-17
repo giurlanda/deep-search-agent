@@ -7,6 +7,8 @@ Public API:
   refinement architecture.
 - :data:`DEEP_SEARCH_RUBRIC` — the default grading rubric.
 - :class:`DefaultRubricMiddleware` — auto-injects a rubric into the state.
+- :class:`DeepSearchRubricMiddleware` — the evaluator/critic loop; grades the
+  orchestrator's final answer against the rubric in full (untruncated).
 - :class:`SearchBudgetResetMiddleware` — resets the per-cycle search budget at
   each research-cycle boundary.
 - :class:`SearchBudget` — thread-safe per-cycle search budget shared with the
@@ -22,6 +24,7 @@ Public API:
 from deep_search_agent.factory import create_deep_search_agent
 from deep_search_agent.metrics import CycleMetrics, SessionMetrics, SubagentStats
 from deep_search_agent.middleware import (
+    DeepSearchRubricMiddleware,
     DefaultRubricMiddleware,
     SearchBudgetResetMiddleware,
 )
@@ -47,6 +50,7 @@ __all__ = [
     "PERSPECTIVE_AGENT_PROMPT",
     "SEARCH_AGENT_PROMPT_TEMPLATE",
     "CycleMetrics",
+    "DeepSearchRubricMiddleware",
     "DefaultRubricMiddleware",
     "SearchBudget",
     "SearchBudgetResetMiddleware",
@@ -57,4 +61,4 @@ __all__ = [
     "create_searxng_search_tool",
 ]
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"

@@ -86,6 +86,7 @@ Deep-search-specific parameters:
 | `enable_perspectives` | `True` | Adds `perspective-agent` and instructs the orchestrator to delegate to it before decomposing the query. Set `False` for simple queries where a single-axis decomposition is sufficient |
 | `rubric` | `DEEP_SEARCH_RUBRIC` | Custom evaluation rubric |
 | `auto_rubric` | `True` | Auto-inject the rubric into the state on every invoke |
+| `on_evaluation` | `None` | Callback invoked with each `RubricEvaluation` after the grader scores a cycle (e.g. to log verdicts); exceptions are logged and suppressed |
 | `subagents_middleware` | `()` | Extra middleware injected into each built-in sub-agent (perspective-agent, search-agent, fetch-agent, fact-check-agent) |
 | `subagents` | `None` | Extra sub-agents, added to the built-in ones |
 | `backend` | `StateBackend()` | Filesystem backend shared by the orchestrator and every sub-agent |

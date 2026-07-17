@@ -10,7 +10,11 @@ from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage
 
 import deep_search_agent.factory as factory_module
-from deep_search_agent import DEEP_SEARCH_RUBRIC, DefaultRubricMiddleware
+from deep_search_agent import (
+    DEEP_SEARCH_RUBRIC,
+    DeepSearchRubricMiddleware,
+    DefaultRubricMiddleware,
+)
 from deep_search_agent.factory import create_deep_search_agent
 from deep_search_agent.subagents import (
     FACT_CHECK_AGENT_NAME,
@@ -104,8 +108,27 @@ def test_rubric_middleware_configured_with_cycles(captured):
     assert isinstance(middleware[0], DefaultRubricMiddleware)
     assert middleware[0].rubric == DEEP_SEARCH_RUBRIC
     rubric_mw = middleware[1]
-    assert isinstance(rubric_mw, RubricMiddleware)
+    # DeepSearchRubricMiddleware (our untruncated-grader subclass), not the
+    # bare deepagents RubricMiddleware (issue #22).
+    assert isinstance(rubric_mw, DeepSearchRubricMiddleware)
     assert rubric_mw.max_iterations == 5
+
+
+def test_on_evaluation_forwarded_to_rubric_middleware(captured):
+    def callback(evaluation):  # noqa: ARG001
+        pass
+
+    create_deep_search_agent(model=make_fake_model(), on_evaluation=callback)
+
+    rubric_mw = captured["middleware"][1]
+    assert isinstance(rubric_mw, DeepSearchRubricMiddleware)
+    assert rubric_mw._on_evaluation is callback
+
+
+def test_on_evaluation_defaults_to_none(captured):
+    create_deep_search_agent(model=make_fake_model())
+
+    assert captured["middleware"][1]._on_evaluation is None
 
 
 def test_custom_rubric_is_injected(captured):
