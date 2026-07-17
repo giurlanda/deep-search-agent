@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `DeepSearchRubricMiddleware` is exported from the package `__all__`.
+- New `on_evaluation` factory parameter that forwards a callback to the
+  evaluator middleware; it is invoked with each `RubricEvaluation` after the
+  grader scores a research cycle (e.g. to log per-criterion verdicts or stream
+  progress). Exceptions it raises are logged and suppressed.
 
 ## [0.3.0] - 2026-07-16
 

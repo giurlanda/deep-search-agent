@@ -114,6 +114,23 @@ def test_rubric_middleware_configured_with_cycles(captured):
     assert rubric_mw.max_iterations == 5
 
 
+def test_on_evaluation_forwarded_to_rubric_middleware(captured):
+    def callback(evaluation):  # noqa: ARG001
+        pass
+
+    create_deep_search_agent(model=make_fake_model(), on_evaluation=callback)
+
+    rubric_mw = captured["middleware"][1]
+    assert isinstance(rubric_mw, DeepSearchRubricMiddleware)
+    assert rubric_mw._on_evaluation is callback
+
+
+def test_on_evaluation_defaults_to_none(captured):
+    create_deep_search_agent(model=make_fake_model())
+
+    assert captured["middleware"][1]._on_evaluation is None
+
+
 def test_custom_rubric_is_injected(captured):
     create_deep_search_agent(model=make_fake_model(), rubric="- my criterion")
 

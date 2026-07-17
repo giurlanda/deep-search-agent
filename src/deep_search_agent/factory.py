@@ -55,9 +55,10 @@ from deep_search_agent.tools import create_fetch_url_tool, create_searxng_search
 from deep_search_agent.tools.search import DEFAULT_SEARXNG_BASE_URL, SearchBudget
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from deepagents.backends.protocol import BackendFactory, BackendProtocol
+    from deepagents.middleware.rubric import RubricEvaluation
     from langchain.agents.middleware.types import AgentMiddleware
     from langchain_core.language_models import BaseChatModel
     from langchain_core.messages import SystemMessage
@@ -98,6 +99,7 @@ def create_deep_search_agent(
     enable_perspectives: bool = True,
     rubric: str | None = None,
     auto_rubric: bool = True,
+    on_evaluation: Callable[[RubricEvaluation], None] | None = None,
     system_prompt: str | SystemMessage | None = None,
     middleware: Sequence[AgentMiddleware] = (),
     subagents_middleware: Sequence[AgentMiddleware] = (),
@@ -171,6 +173,13 @@ def create_deep_search_agent(
             into the invocation state so the evaluation loop works out of
             the box. When ``False``, the loop only activates if the caller
             passes a ``rubric`` key in the invocation state.
+        on_evaluation: Optional callback invoked with each
+            :class:`~deepagents.middleware.rubric.RubricEvaluation` after the
+            grader scores a research cycle, e.g. to log the per-criterion
+            verdicts or stream progress to a UI. Exceptions it raises are
+            logged and suppressed by the underlying ``RubricMiddleware``, so it
+            must not be used to enforce control flow. ``None`` (default)
+            registers no callback.
         system_prompt: Override for the orchestrator system prompt. Defaults
             to the built-in deep-search orchestrator prompt parametrized
             with the cycle/URL budgets.
@@ -322,7 +331,11 @@ def create_deep_search_agent(
     # reports get cut at 4,000 chars and the grader flags a phantom
     # "incomplete/truncated" gap (issue #22).
     agent_middleware.append(
-        DeepSearchRubricMiddleware(model=model, max_iterations=max_research_cycles)
+        DeepSearchRubricMiddleware(
+            model=model,
+            max_iterations=max_research_cycles,
+            on_evaluation=on_evaluation,
+        )
     )
     # Reset the per-cycle search budget at each research-cycle boundary. Placed
     # after RubricMiddleware so it participates in the same before/after_agent
