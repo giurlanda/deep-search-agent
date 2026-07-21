@@ -48,18 +48,20 @@ class DebugMiddleware(AgentMiddleware):
         self._color = color
 
     def _colorize(self, text: str, color: DebugColor | None = None) -> str:
-        return f"{color or self._color.value}{text}{_ANSI_RESET}"
+        return f"{color.value if color else self._color.value}{text}{_ANSI_RESET}"
     
     def before_agent(self, state: AgentState[Any], runtime: Runtime[None]) -> dict[str, Any] | None:
         last = state["messages"][-1]
         print(
-            self._colorize(f" ===\n[debug][before agent] {type(last).__name__}: {last.content!r}", DebugColor.YELLOW)
+            self._colorize(f" ===\n[debug][before agent] {type(last).__name__}: {last.content!r}", 
+                           DebugColor.YELLOW)
         )
 
     def after_agent(self, state: AgentState[Any], runtime: Runtime[None]) -> dict[str, Any] | None:
         last = state["messages"][-1]
         print(
-            self._colorize(f" ===\n[debug][after agent] {type(last).__name__}: {last.content!r}", DebugColor.GREEN)
+            self._colorize(f" ===\n[debug][after agent] {type(last).__name__}: {last.content!r}", 
+                           DebugColor.GREEN)
         )
 
     def after_model(self, state: dict[str, Any], runtime: Runtime) -> None:
@@ -85,7 +87,8 @@ class DebugMiddleware(AgentMiddleware):
         content = result.content if isinstance(result, ToolMessage) else result
         print(
             self._colorize(
-                f" ---\n[debug][tool] {request.tool_call['name']} -> {content!r}", DebugColor.CYAN
+                f" ---\n[debug][tool] {request.tool_call['name']} -> {content!r}", 
+                DebugColor.CYAN
             )
         )
         return result
