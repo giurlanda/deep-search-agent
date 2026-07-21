@@ -1,6 +1,14 @@
-"""Unit tests for the fetch/extraction tool (no network access)."""
+"""Unit tests for the fetch/extraction tool (no network access).
+
+The headless-rendering fallback is exercised with Playwright stubbed out at
+:func:`~deep_search_agent.tools.fetch._render_html`: the browser never launches,
+but the thread isolation and the error handling around it stay real.
+"""
 
 from __future__ import annotations
+
+import asyncio
+import threading
 
 import httpx
 import pytest
@@ -25,6 +33,40 @@ HTML_PAGE = """
   </body>
 </html>
 """
+
+
+# Static HTML of a JavaScript-only page: trafilatura finds nothing in it.
+SPA_SHELL = "<html><body><div id='root'></div><script>app()</script></body></html>"
+
+
+@pytest.fixture
+def fake_render(monkeypatch):
+    """Stub ``_render_html`` with a configurable, Playwright-free fake.
+
+    Set ``holder.html`` (the rendered DOM) or ``holder.error`` (an exception to
+    raise); ``holder.calls`` records the ``(url, timeout)`` of every call and
+    ``holder.threads`` the thread each one ran on.
+    """
+
+    class Holder:
+        html: str = ""
+        error: Exception | None = None
+        calls: list[tuple[str, float]]
+        threads: list[str]
+
+    holder = Holder()
+    holder.calls = []
+    holder.threads = []
+
+    def _render(url: str, timeout: float) -> str:
+        holder.calls.append((url, timeout))
+        holder.threads.append(threading.current_thread().name)
+        if holder.error is not None:
+            raise holder.error
+        return holder.html
+
+    monkeypatch.setattr(fetch_module, "_render_html", _render)
+    return holder
 
 
 def test_extracts_main_html_content(fake_httpx_get):
@@ -198,7 +240,7 @@ def test_network_error_returns_error_string(fake_httpx_get):
 
 def test_unextractable_html_returns_error(fake_httpx_get):
     fake_httpx_get.response = FakeResponse(
-        text="<html><body><script>app()</script></body></html>",
+        text=SPA_SHELL,
         headers={"content-type": "text/html"},
     )
     tool = create_fetch_url_tool()
@@ -207,6 +249,138 @@ def test_unextractable_html_returns_error(fake_httpx_get):
 
     assert output.startswith("ERROR:")
     assert "no main content" in output
+
+
+def test_js_fallback_is_off_by_default(fake_httpx_get, fake_render):
+    fake_render.html = HTML_PAGE
+    fake_httpx_get.response = FakeResponse(
+        text=SPA_SHELL, headers={"content-type": "text/html"}
+    )
+    tool = create_fetch_url_tool()
+
+    output = tool.invoke({"url": "https://example.org/spa"})
+
+    assert output.startswith("ERROR:")
+    assert fake_render.calls == []
+
+
+def test_js_fallback_recovers_a_javascript_only_page(fake_httpx_get, fake_render):
+    fake_render.html = HTML_PAGE
+    fake_httpx_get.response = FakeResponse(
+        text=SPA_SHELL, headers={"content-type": "text/html"}
+    )
+    tool = create_fetch_url_tool(enable_js_render_fallback=True, js_render_timeout=12.0)
+
+    output = tool.invoke({"url": "https://example.org/spa"})
+
+    assert "error correction" in output
+    assert not output.startswith("ERROR:")
+    assert fake_render.calls == [("https://example.org/spa", 12.0)]
+
+
+def test_js_fallback_is_skipped_when_static_extraction_succeeds(
+    fake_httpx_get, fake_render
+):
+    fake_httpx_get.response = FakeResponse(
+        text=HTML_PAGE, headers={"content-type": "text/html"}
+    )
+    tool = create_fetch_url_tool(enable_js_render_fallback=True)
+
+    output = tool.invoke({"url": "https://example.org/article"})
+
+    assert "error correction" in output
+    assert fake_render.calls == []
+
+
+def test_js_fallback_renders_off_the_calling_thread(fake_httpx_get, fake_render):
+    # Playwright's sync API refuses to run on a thread owning a live asyncio
+    # loop, which is exactly what an async caller hands the tool.
+    fake_render.html = HTML_PAGE
+    fake_httpx_get.response = FakeResponse(
+        text=SPA_SHELL, headers={"content-type": "text/html"}
+    )
+    tool = create_fetch_url_tool(enable_js_render_fallback=True)
+
+    async def call() -> str:
+        return await tool.ainvoke({"url": "https://example.org/spa"})
+
+    output = asyncio.run(call())
+
+    assert "error correction" in output
+    assert fake_render.threads[0] != threading.current_thread().name
+
+
+def test_js_fallback_on_still_empty_page_returns_error(fake_httpx_get, fake_render):
+    fake_render.html = "<html><body><div id='root'></div></body></html>"
+    fake_httpx_get.response = FakeResponse(
+        text=SPA_SHELL, headers={"content-type": "text/html"}
+    )
+    tool = create_fetch_url_tool(enable_js_render_fallback=True)
+
+    output = tool.invoke({"url": "https://example.org/spa"})
+
+    assert output.startswith("ERROR:")
+    assert "no main content" in output
+    assert len(fake_render.calls) == 1
+
+
+def test_js_fallback_without_playwright_returns_actionable_error(
+    fake_httpx_get, fake_render
+):
+    fake_render.error = ImportError("No module named 'playwright'")
+    fake_httpx_get.response = FakeResponse(
+        text=SPA_SHELL, headers={"content-type": "text/html"}
+    )
+    tool = create_fetch_url_tool(enable_js_render_fallback=True)
+
+    output = tool.invoke({"url": "https://example.org/spa"})
+
+    assert output.startswith("ERROR:")
+    assert "js-render" in output
+
+
+def test_js_fallback_render_failure_returns_error_string(fake_httpx_get, fake_render):
+    fake_render.error = RuntimeError("browser executable not found")
+    fake_httpx_get.response = FakeResponse(
+        text=SPA_SHELL, headers={"content-type": "text/html"}
+    )
+    tool = create_fetch_url_tool(enable_js_render_fallback=True)
+
+    output = tool.invoke({"url": "https://example.org/spa"})
+
+    assert output.startswith("ERROR:")
+    assert "browser executable not found" in output
+
+
+def test_js_fallback_output_is_truncated_like_static_content(
+    fake_httpx_get, fake_render
+):
+    paragraphs = "".join(f"<p>{'word ' * 40}</p>" for _ in range(30))
+    fake_render.html = f"<html><body><article>{paragraphs}</article></body></html>"
+    fake_httpx_get.response = FakeResponse(
+        text=SPA_SHELL, headers={"content-type": "text/html"}
+    )
+    tool = create_fetch_url_tool(
+        enable_js_render_fallback=True, max_content_chars=1_000
+    )
+
+    output = tool.invoke({"url": "https://example.org/spa"})
+
+    assert fetch_module.TRUNCATION_MARKER in output
+    assert len(output) <= 1_000 + len(fetch_module.TRUNCATION_MARKER)
+
+
+def test_js_fallback_does_not_apply_to_pdfs(fake_httpx_get, fake_render, monkeypatch):
+    monkeypatch.setattr(fetch_module, "_extract_pdf_text", lambda content: "")
+    fake_httpx_get.response = FakeResponse(
+        content=b"%PDF-1.4 fake", headers={"content-type": "application/pdf"}
+    )
+    tool = create_fetch_url_tool(enable_js_render_fallback=True)
+
+    output = tool.invoke({"url": "https://example.org/scan.pdf"})
+
+    assert "no extractable text" in output
+    assert fake_render.calls == []
 
 
 @pytest.mark.parametrize(

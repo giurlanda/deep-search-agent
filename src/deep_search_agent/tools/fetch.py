@@ -8,6 +8,10 @@ content:
 - PDF documents (detected via ``Content-Type`` or a ``.pdf`` extension) are
   read with ``pypdf``.
 
+When static extraction yields nothing — the typical outcome for JavaScript-only
+pages and bot walls — an opt-in headless-browser fallback re-renders the page
+with Playwright and extracts again (see ``enable_js_render_fallback``).
+
 Content longer than the budget is truncated head+tail rather than head-only,
 so that conclusions and references at the end of a document survive.
 
@@ -18,6 +22,7 @@ calling agent can reroute to a different source without crashing the flow.
 from __future__ import annotations
 
 import random
+from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
 
 import httpx
@@ -72,6 +77,75 @@ def _is_pdf(url: str, content_type: str) -> bool:
     return "application/pdf" in content_type or url.lower().split("?")[0].endswith(
         ".pdf"
     )
+
+
+def _extract_html_text(html: str, url: str) -> str:
+    """Extract the main content of an HTML document, or ``""`` if there is none."""
+    return (
+        trafilatura.extract(
+            html,
+            url=url,
+            include_comments=False,
+            include_tables=True,
+        )
+        or ""
+    )
+
+
+def _render_html(url: str, timeout: float) -> str:
+    """Load ``url`` in a headless Chromium and return the rendered HTML.
+
+    Args:
+        url: The absolute URL to render.
+        timeout: Seconds to wait for the page to settle.
+
+    Returns:
+        The DOM serialized after rendering. When the page never goes idle
+        within ``timeout``, whatever rendered so far is returned anyway.
+
+    Raises:
+        ImportError: If Playwright is not installed.
+        Exception: Any Playwright error (browser not installed, navigation
+            failure, ...).
+    """
+    from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        try:
+            page = browser.new_page(user_agent=random.choice(USER_AGENTS))
+            try:
+                page.goto(url, timeout=timeout * 1000, wait_until="networkidle")
+            except PlaywrightTimeoutError:
+                # Pages holding a connection open (analytics, websockets) never
+                # reach networkidle; extract what rendered before the deadline
+                # rather than discarding the whole attempt.
+                pass
+            return page.content()
+        finally:
+            browser.close()
+
+
+def _render_and_extract(url: str, timeout: float) -> str:
+    """Re-fetch ``url`` through a headless browser and extract its content.
+
+    Playwright's sync API refuses to run on a thread that owns a live asyncio
+    loop, and ``fetch_url`` may well be called from one. Rendering is therefore
+    always handed to a dedicated worker thread, which by construction has no
+    loop of its own.
+
+    Args:
+        url: The absolute URL to render.
+        timeout: Seconds to wait for the page to settle.
+
+    Returns:
+        The extracted text, or ``""`` when the rendered page has no main
+        content either.
+    """
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        html = pool.submit(_render_html, url, timeout).result()
+    return _extract_html_text(html, url)
 
 
 # Share of the character budget kept from the start of the document; the rest
@@ -130,6 +204,8 @@ def create_fetch_url_tool(
     *,
     timeout: float = 20.0,
     max_content_chars: int = 20_000,
+    enable_js_render_fallback: bool = False,
+    js_render_timeout: float = 30.0,
 ) -> BaseTool:
     """Build a tool that downloads a URL and extracts its main content.
 
@@ -138,6 +214,16 @@ def create_fetch_url_tool(
         max_content_chars: Maximum number of content characters returned;
             longer content keeps its head and its tail, joined by an explicit
             marker signalling the omitted middle section.
+        enable_js_render_fallback: When ``True``, an HTML page whose static
+            content cannot be extracted is re-fetched through a headless
+            Chromium (Playwright) and extracted again, recovering
+            JavaScript-only pages and bot walls. Requires the ``js-render``
+            extra and installed Playwright browsers; when either is missing the
+            tool returns an ``ERROR: ...`` string. Off by default, since it
+            costs a browser launch per recovered page.
+        js_render_timeout: Seconds to wait for a rendered page to settle. Kept
+            separate from ``timeout`` because rendering is much slower than the
+            plain HTTP request. Ignored unless the fallback is enabled.
 
     Returns:
         A LangChain tool named ``fetch_url`` that takes a ``url`` string and
@@ -186,15 +272,22 @@ def create_fetch_url_tool(
                     "(it may be a scanned document)."
                 )
         else:
-            text = (
-                trafilatura.extract(
-                    response.text,
-                    url=url,
-                    include_comments=False,
-                    include_tables=True,
-                )
-                or ""
-            )
+            text = _extract_html_text(response.text, url)
+            if not text.strip() and enable_js_render_fallback:
+                try:
+                    text = _render_and_extract(url, js_render_timeout)
+                except ImportError:
+                    return (
+                        f"ERROR: cannot render {url}: the JavaScript rendering "
+                        "fallback needs Playwright. Install it with "
+                        "'pip install deep-search-agent[js-render]' followed by "
+                        "'playwright install chromium'."
+                    )
+                except Exception as exc:  # Playwright raises many error types
+                    return (
+                        f"ERROR: headless rendering of {url} failed: {exc}. "
+                        "Try another source."
+                    )
             if not text.strip():
                 return (
                     f"ERROR: no main content could be extracted from {url} "

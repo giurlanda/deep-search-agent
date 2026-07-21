@@ -350,6 +350,9 @@ docs = [
     { name = "mkdocs-material" },
     { name = "mkdocstrings", extra = ["python"] },
 ]
+js-render = [
+    { name = "playwright" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -368,10 +371,11 @@ requires-dist = [
     { name = "mkdocs", marker = "extra == 'docs'", specifier = ">=1.6" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=0.26" },
+    { name = "playwright", marker = "extra == 'js-render'", specifier = ">=1.49" },
     { name = "pypdf", specifier = ">=6.14.2" },
     { name = "trafilatura", specifier = ">=2.1.0" },
 ]
-provides-extras = ["benchmark", "docs"]
+provides-extras = ["benchmark", "docs", "js-render"]
 
 [package.metadata.requires-dev]
 dev = [

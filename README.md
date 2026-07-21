@@ -82,6 +82,8 @@ Deep-search-specific parameters:
 | `searxng_budget` | `None` | Maximum SearxNG searches per research cycle; when exhausted the tool returns an `ERROR:` telling the model no budget is left. `None` means unlimited |
 | `request_timeout` | `15.0` | HTTP timeout (s) for search and fetch |
 | `max_content_chars_per_page` | `20000` | Truncation of extracted content per page |
+| `enable_js_render_fallback` | `False` | Re-fetch pages whose static HTML yields no content through a headless Chromium, recovering JavaScript-only pages and bot walls. Requires the `js-render` extra plus `playwright install chromium` |
+| `js_render_timeout` | `30.0` | Seconds the headless renderer waits for a page to settle; ignored unless the fallback is enabled |
 | `search_tools` | `None` | Additional search tools for search-agent, fact-check-agent, and perspective-agent (e.g. Tavily, RAG retrieval) |
 | `enable_perspectives` | `True` | Adds `perspective-agent` and instructs the orchestrator to delegate to it before decomposing the query. Set `False` for simple queries where a single-axis decomposition is sufficient |
 | `rubric` | `DEEP_SEARCH_RUBRIC` | Custom evaluation rubric |
