@@ -80,3 +80,21 @@ path = "src/deep_search_agent/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/deep_search_agent"]
+
+[tool.hatch.build.targets.sdist]
+# Keep the source distribution lean: ship the package and its tests plus the
+# legal/documentation files, but leave out dev-only tooling (uv.lock,
+# .python-version), CI, docs site, and the benchmark harness.
+# Root-anchored patterns (leading "/") so, e.g., "README.md" does not also pull
+# in benchmark/README.md.
+only-include = [
+    "/src/deep_search_agent",
+    "/tests",
+    "/README.md",
+    "/CHANGELOG.md",
+    "/LICENSE",
+    "/pyproject.toml",
+]
+exclude = [
+    "/.gitignore",
+]

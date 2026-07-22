@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-07-22
+
+### Added
+
+- GitHub Actions `publish` workflow that builds, tests, and uploads the package
+  to PyPI on `v*` tag pushes via PyPI Trusted Publishing (OIDC) — no stored API
+  token. See the "Publishing" section of the README for the one-time PyPI
+  trusted-publisher setup.
+
+### Changed
+
+- Trimmed the source distribution: it now ships only the package, its tests, and
+  `README`/`CHANGELOG`/`LICENSE`, excluding dev tooling (`uv.lock`,
+  `.python-version`), CI config, the docs site, and the benchmark harness.
+
 ## [0.4.0] - 2026-07-17
 
 ### Added
@@ -294,7 +309,8 @@ Initial release.
 [#22]: https://github.com/giurlanda/deep-search-agent/issues/22
 [#23]: https://github.com/giurlanda/deep-search-agent/issues/23
 [#25]: https://github.com/giurlanda/deep-search-agent/issues/25
-[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/giurlanda/deep-search-agent/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/giurlanda/deep-search-agent/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/giurlanda/deep-search-agent/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/giurlanda/deep-search-agent/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/giurlanda/deep-search-agent/compare/v0.3.0...v0.3.1

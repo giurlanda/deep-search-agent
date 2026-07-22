@@ -144,6 +144,28 @@ uv run pytest
 
 The unit tests require neither network nor API keys: HTTP and LLM are simulated.
 
+## Publishing
+
+Releases are published to [PyPI](https://pypi.org/project/deep-search-agent/) by
+the [`publish` workflow](.github/workflows/publish.yml), triggered on pushing a
+`v*` tag. It uses **PyPI Trusted Publishing** (OIDC), so no API token is stored.
+
+One-time setup on PyPI (Account → Publishing → *Add a pending publisher*):
+
+| Field | Value |
+|---|---|
+| PyPI project name | `deep-search-agent` |
+| Owner | `giurlanda` |
+| Repository name | `deep-search-agent` |
+| Workflow name | `publish.yml` |
+| Environment name | `pypi` |
+
+To cut a release: bump `__version__` in
+[`src/deep_search_agent/__init__.py`](src/deep_search_agent/__init__.py), update
+the `CHANGELOG`, then push a matching tag (e.g. `git tag v0.4.1 && git push
+origin v0.4.1`). Build locally with `uv build` and validate with
+`uvx twine check dist/*`.
+
 ## Package structure
 
 ```
